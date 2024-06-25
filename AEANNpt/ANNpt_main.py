@@ -14,7 +14,6 @@ pip install datasets
 pip install torch
 pip install lovely-tensors
 pip install torchmetrics
-pip install torchvision	[required for OR]
 
 # Usage:
 source activate pytorchsenv

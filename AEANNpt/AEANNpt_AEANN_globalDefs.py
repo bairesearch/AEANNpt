@@ -22,10 +22,13 @@ debugSmallNetwork = False
 
 useAutoencoder = True	#only disable for debug
 
-supportSkipLayers = True
+autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation
+#autoencoderPrediction = "inputLayer" 	#autoencoder (backwards connections) predicts input layer 	#orig AEORtf autoencoder_simulation2 implementation
+supportSkipLayers = True #fully connected skip layer network
 if(supportSkipLayers):
-	supportSkipLayersAutoencodeLastLayerPredictionOnly = True	#introduced by AEANNpt (not in orig AEANNtf)	#autoencoder (backwards connections) only predicts last layer outputs, not all previous layer outputs
-
+	autoencoderPrediction = "allPreviousLayers"		#optional	#orig AEANNtf implementation
+	pass
+	
 trainLocal = True
 activationFunctionTypeForward = "relu"
 activationFunctionTypeBackward = "sigmoid"	#CHECKTHSI #use sigmoid for consistency with AEANNtf
