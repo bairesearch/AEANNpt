@@ -27,7 +27,14 @@ autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) pre
 supportSkipLayers = True #fully connected skip layer network
 if(supportSkipLayers):
 	autoencoderPrediction = "allPreviousLayers"		#optional	#orig AEANNtf implementation
-	pass
+	supportSkipLayersF = True
+	if(autoencoderPrediction == "allPreviousLayers"):
+		supportSkipLayersB = False
+	else:
+		supportSkipLayersB = True	#optional	#add full connectivity to decoder	#not in orig AEANNtf/AEANNpt implementation
+else:
+	supportSkipLayersF = False
+	supportSkipLayersB = False
 	
 trainLocal = True
 activationFunctionTypeForward = "relu"

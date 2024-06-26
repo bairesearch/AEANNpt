@@ -62,18 +62,24 @@ class AEANNmodel(nn.Module):
 		for l1 in range(1, config.numberOfLayers+1):	
 			if(supportSkipLayers):
 				layersLinearListF2 = []
-				if(autoencoderPrediction=="allPreviousLayers"):
-					layersLinearListB2 = []
+				layersLinearListB2 = []
 				for l2 in range(0, l1):
-					if(l2 < l1):
+					if(supportSkipLayersF):
 						linearF2 = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=True, bias=False, layerIndex2=l1)	#need to add bias after skip layer connections have been added
 						layersLinearListF2.append(linearF2)
-						if(autoencoderPrediction=="allPreviousLayers"):
-							linearB2 = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=False, bias=True, layerIndex2=l1)	#orig AEANNtf:bias=False
-							layersLinearListB2.append(linearB2)
+					if(autoencoderPrediction=="allPreviousLayers"):
+						linearB2 = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=False, bias=True, layerIndex2=l1)	#orig AEANNtf:bias=False
+						layersLinearListB2.append(linearB2)
+					elif(supportSkipLayersB):
+						if(autoencoderPrediction=="previousLayer"):
+							l3 = self.getLayerIndex(l1)
+						elif(autoencoderPrediction=="inputLayer"):
+							l3 = 0
+						linearB2 = ANNpt_linearSublayers.generateLinearLayer(self, l3, config, forward=False, bias=True, layerIndex2=l2+1)	#orig AEANNtf:bias=False
+						layersLinearListB2.append(linearB2)
 				layersLinearF2 = nn.ModuleList(layersLinearListF2)
 				layersLinearListF.append(layersLinearF2)
-				if(autoencoderPrediction=="allPreviousLayers"):
+				if(supportSkipLayersB or autoencoderPrediction=="allPreviousLayers"):
 					layersLinearB2 = nn.ModuleList(layersLinearListB2)
 					layersLinearListB.append(layersLinearB2)
 				else:
@@ -86,12 +92,13 @@ class AEANNmodel(nn.Module):
 				B = BiasLayer(self.n_h[l1])	#need to add bias after skip layer connections have been added
 				layersListB.append(B)
 			else:
+				l2 = self.getLayerIndex(l1)
+				linearF = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=True, bias=True, layerIndex2=l1)
+				layersLinearListF.append(linearF)
 				if(autoencoderPrediction=="previousLayer"):
 					l2 = self.getLayerIndex(l1)
 				elif(autoencoderPrediction=="inputLayer"):
 					l2 = 0
-				linearF = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=True, bias=True, layerIndex2=l1)
-				layersLinearListF.append(linearF)
 				linearB = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=False, bias=True, layerIndex2=l1)	#orig AEANNtf:bias=False
 				layersLinearListB.append(linearB)
 
@@ -109,12 +116,11 @@ class AEANNmodel(nn.Module):
 			self.lossFunctionFinal = nn.NLLLoss()	#nn.CrossEntropyLoss == NLLLoss(log(softmax(x)))
 		self.accuracyFunction = Accuracy(task="multiclass", num_classes=self.config.outputLayerSize, top_k=1)
 		
-		if(supportSkipLayers):
-			self.Ztrace = [None]*(config.numberOfLayers+1)
-			self.Atrace = [None]*(config.numberOfLayers+1)
-			for l1 in range(1, numberOfLayers+1):
-				self.Ztrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
-				self.Atrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
+		self.Ztrace = [None]*(config.numberOfLayers+1)
+		self.Atrace = [None]*(config.numberOfLayers+1)
+		for l1 in range(1, numberOfLayers+1):
+			self.Ztrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
+			self.Atrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
 
 	def generateLayerSizeList(self):
 		n_h = [None]*(self.config.numberOfLayers+1)
@@ -137,8 +143,8 @@ class AEANNmodel(nn.Module):
 		outputPred = x #in case layer=0
 
 		AprevLayer = x
-		if(supportSkipLayers):
-			self.Atrace[0] = AprevLayer
+		self.Atrace[0] = AprevLayer
+		self.Ztrace[0] = pt.zeros_like(AprevLayer)	#set to zero as not used (just used for shape initialisation)
 
 		maxLayer = self.config.numberOfLayers
 		
@@ -165,10 +171,9 @@ class AEANNmodel(nn.Module):
 			A = A.detach()	#only train weights for layer l1
 
 			AprevLayer = A
-			if(supportSkipLayers):
-				self.Ztrace[l1] = Z
-				self.Atrace[l1] = A
-
+			self.Ztrace[l1] = Z
+			self.Atrace[l1] = A
+				
 		return loss, accuracy
 
 	def getLayerIndex(self, l1):
@@ -191,42 +196,52 @@ class AEANNmodel(nn.Module):
 
 		outputTarget = None
 
-		if(supportSkipLayers):
-			if(autoencoder):
+		if(autoencoder):
+			if(autoencoderPrediction=="allPreviousLayers"):
 				outputTargetList = []
+				for l2 in range(0, l1):
+					outputTargetListPartial = self.Atrace[l2]
+					outputTargetList.append(outputTargetListPartial)
+				outputTarget = pt.concat(outputTargetList, dim=1)
+				#print("outputTarget.shape = ", outputTarget.shape)
+			elif(autoencoderPrediction=="previousLayer"):
+				outputTarget = AprevLayer
+			elif(autoencoderPrediction=="inputLayer"):
+				outputTarget = self.Atrace[0]
+		
+		if(supportSkipLayersF):
 			Z = pt.zeros_like(self.Ztrace[l1])
 			for l2 in range(0, l1):
 				Zpartial = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), self.Atrace[l2], self.layersLinearF[l1][l2])
 				Z = pt.add(Z, Zpartial)
-				if(autoencoder):
-					if(autoencoderPrediction=="allPreviousLayers"):
-						outputTargetListPartial = self.Atrace[l2]
-						outputTargetList.append(outputTargetListPartial)
 			Z = pt.add(Z, self.layersB[l1](Z))	#need to add bias after skip layer connections have been added
-			if(autoencoder):
-				if(autoencoderPrediction=="allPreviousLayers"):
-					outputTarget = pt.concat(outputTargetList, dim=1)
-					#print("outputTarget.shape = ", outputTarget.shape)
-				elif(autoencoderPrediction=="previousLayer"):
-					outputTarget = AprevLayer
-				elif(autoencoderPrediction=="inputLayer"):
-					outputTarget = self.Atrace[0]
-		else:	
-			if(autoencoder):
-				outputTarget = AprevLayer
+		else:
 			Z = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), AprevLayer, self.layersLinearF[l1])
 		A = ANNpt_linearSublayers.executeActivationLayer(self, self.getLayerIndex(l1), Z, self.activationF)	#relU	
 
 		return A, Z, outputTarget
 
 	def neuralNetworkPropagationLayerBackwardAutoencoder(self, l1, A):
-		if(supportSkipLayers and autoencoderPrediction=="allPreviousLayers"):
+		if(autoencoderPrediction=="allPreviousLayers"):
 			outputPredList = []
 			for l2 in range(0, l1):
 				Zback = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), A, self.layersLinearB[l1][l2])
 				outputPredPartial = self.activationB(Zback)
 				outputPredList.append(outputPredPartial)
 			outputPred = pt.concat(outputPredList, dim=1)
+		elif(supportSkipLayersB):
+			if(autoencoderPrediction=="inputLayer"):
+				Zback = pt.zeros_like(self.Ztrace[0])
+			elif(autoencoderPrediction=="previousLayer"):
+				Zback = pt.zeros_like(self.Ztrace[l1-1])
+			for l2 in range(0, l1):
+				if(l2 == l1-1):
+					Apartial = A #allow backprop through current encoder layer only
+				else:
+					Apartial = self.Atrace[l1]
+				ZbackPartial = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), Apartial, self.layersLinearB[l1][l2])
+				Zback = pt.add(Zback, ZbackPartial)
+			outputPred = self.activationB(Zback)
 		else:
 			Zback = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), A, self.layersLinearB[l1])
 			outputPred = self.activationB(Zback)
