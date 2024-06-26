@@ -158,7 +158,8 @@ class AEANNmodel(nn.Module):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
 				else:
 					outputPred = self.neuralNetworkPropagationLayerBackwardAutoencoder(l1, A)
-					self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionBackward)	#first layer optimiser is defined at i=0 
+					if(trainOrTest):
+						self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionBackward)	#first layer optimiser is defined at i=0 
 			else:
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
@@ -166,8 +167,11 @@ class AEANNmodel(nn.Module):
 					outputPred = A
 			if(l1 == self.config.numberOfLayers):
 				outputTarget = y
-				loss, accuracy = self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionFinal, calculateAccuracy=True)
-			
+				if(trainOrTest):
+					loss, accuracy = self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionFinal, calculateAccuracy=True)
+				else:
+					loss, accuracy = self.calculateLossAccuracy(outputPred, outputTarget,  self.lossFunctionFinal, calculateAccuracy=True)
+				
 			A = A.detach()	#only train weights for layer l1
 
 			AprevLayer = A
@@ -181,16 +185,19 @@ class AEANNmodel(nn.Module):
 		return layerIndex
 	
 	def trainLayer(self, layerIndex, pred, target, optim, lossFunction, calculateAccuracy=False):
-		accuracy = 0
-		if(calculateAccuracy):
-			accuracy = self.accuracyFunction(pred, target)
-		loss = lossFunction(pred, target)
+		loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
 		opt = optim[layerIndex]
 		opt.zero_grad()
 		loss.backward()
 		opt.step()
 		return loss, accuracy
 
+	def calculateLossAccuracy(self, pred, target, lossFunction, calculateAccuracy=False):
+		accuracy = 0
+		if(calculateAccuracy):
+			accuracy = self.accuracyFunction(pred, target)
+		loss = lossFunction(pred, target)
+		return loss, accuracy
 
 	def neuralNetworkPropagationLayerForward(self, l1, AprevLayer, autoencoder):
 
