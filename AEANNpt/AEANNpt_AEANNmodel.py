@@ -53,6 +53,8 @@ class AEANNmodel(nn.Module):
 			
 		layersLinearListF = []
 		layersLinearListB = []
+		if(useBreakaway):
+			layersLinearListO = []
 		layersListB = []
 		layersLinearListF.append(None)	#input layer i=0
 		layersLinearListB.append(None)	#input layer i=0
@@ -102,15 +104,23 @@ class AEANNmodel(nn.Module):
 					l2 = 0
 				linearB = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=False, bias=True, layerIndex2=l1)	#orig AEANNtf:bias=False
 				layersLinearListB.append(linearB)
-
+			if(useBreakaway):
+				l2 = self.getLayerIndex(l1)
+				linearO = ANNpt_linearSublayers.generateLinearLayer2(self, l2, config.hiddenLayerSize, config.outputLayerSize, config.linearSublayersNumber, parallelStreams=False, sign=True, bias=True)
+				layersLinearListO.append(linearO)				
 		self.layersLinearF = nn.ModuleList(layersLinearListF)
 		self.layersLinearB = nn.ModuleList(layersLinearListB)
+		if(useBreakaway):
+			self.layersLinearO = nn.ModuleList(layersLinearListO)
 		self.activationF = ANNpt_linearSublayers.generateActivationFunction(activationFunctionTypeForward)
 		self.activationB = ANNpt_linearSublayers.generateActivationFunction(activationFunctionTypeBackward)
 		if(supportSkipLayers):
 			self.layersB = nn.ModuleList(layersListB)
 		
-		self.lossFunctionBackward = nn.MSELoss()	#lossFunctionAutoencoder
+		if(useAutoencoder):
+			self.lossFunctionBackward = nn.MSELoss()	#lossFunctionAutoencoder
+		if(useBreakaway):
+			self.lossFunctionOutput = nn.CrossEntropyLoss()
 		if(useInbuiltCrossEntropyLossFunction):
 			self.lossFunctionFinal = nn.CrossEntropyLoss()
 		else:
@@ -162,9 +172,8 @@ class AEANNmodel(nn.Module):
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
 				else:
-					outputPred = self.neuralNetworkPropagationLayerBackwardAutoencoder(l1, A)
 					if(trainOrTest):
-						self.trainLayer(l1, outputPred, outputTarget, optim, self.lossFunctionBackward)	#first layer optimiser is defined at i=0 
+						self.trainLayerHidden(l1, A, outputTarget, optim, Otarget=y)	#first layer optimiser is defined at i=0 
 			else:
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
@@ -173,9 +182,9 @@ class AEANNmodel(nn.Module):
 			if(l1 == self.config.numberOfLayers):
 				outputTarget = y
 				if(trainOrTest):
-					loss, accuracy = self.trainLayer(l1, outputPred, outputTarget, optim, self.lossFunctionFinal, calculateAccuracy=True, finalLayer=True)
+					loss, accuracy = self.trainLayerFinal(l1, outputPred, outputTarget, optim, calculateAccuracy=True)
 				else:
-					loss, accuracy = self.calculateLossAccuracy(outputPred, outputTarget,  self.lossFunctionFinal, calculateAccuracy=True)
+					loss, accuracy = self.calculateLossAccuracy(outputPred, outputTarget, self.lossFunctionFinal, calculateAccuracy=True)
 				
 			A = A.detach()	#only train weights for layer l1
 
@@ -198,9 +207,42 @@ class AEANNmodel(nn.Module):
 		#squared_differences = (pred - target) ** 2
 		#mse_per_neuron = squared_differences.mean(dim=0)
 		return mse_per_neuron
-	
-	def trainLayer(self, l1, pred, target, optim, lossFunction, calculateAccuracy=False, finalLayer=False):
-		if(trainingUpdateImplementation=="hebbian" and not finalLayer):
+
+	def trainLayerFinal(self, l1, pred, target, optim, calculateAccuracy=False):
+		lossFunction = self.lossFunctionFinal
+		layerIndex = self.getLayerIndex(l1)
+		loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
+		opt = optim[layerIndex]
+		opt.zero_grad()
+		loss.backward()
+		opt.step()
+		return loss, accuracy
+				
+	def trainLayerHidden(self, l1, Ahidden, Itarget, optim, calculateAccuracy=False, Otarget=None):
+		
+		if(useAutoencoder):
+			Ipred = self.neuralNetworkPropagationLayerBackwardAutoencoder(l1, Ahidden)
+		if(useBreakaway):
+			Opred = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), Ahidden, self.layersLinearO[l1])
+		
+		if(trainingUpdateImplementation=="backprop"):
+			layerIndex = self.getLayerIndex(l1)
+			if(useAutoencoder):
+				IlossFunction = self.lossFunctionBackward
+				Iloss, Iaccuracy = self.calculateLossAccuracy(Ipred, Itarget, IlossFunction, calculateAccuracy)
+				loss = Iloss
+				accuracy = Iaccuracy
+			if(useBreakaway):
+				assert useAutoencoder
+				OlossFunction = OlossFunction=self.lossFunctionOutput
+				Oloss, Oaccuracy = self.calculateLossAccuracy(Opred, Otarget, OlossFunction, calculateAccuracy)
+				loss = Iloss + Oloss
+				accuracy = (Iaccuracy + Oaccuracy)/2
+			opt = optim[layerIndex]
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
+		elif(trainingUpdateImplementation=="hebbian"):
 			#TODO: support supportSkipLayers
 			print("l1 = ", l1)
 			# backpropagation approximation notes:
@@ -210,7 +252,7 @@ class AEANNmodel(nn.Module):
 				# dC/dW = A_l-1 * error_l
 				# Bnew = B+dC/dB [sign reversal]
 				# Wnew = W+dC/dW [sign reversal]
-			IOerror = self.calculateMSE(pred, target)	#error_L = (A_L - y_L)
+			IOerror = self.calculateMSE(Ipred, Itarget)	#error_L = (A_L - y_L)
 			print("IOerror = ", IOerror)
 			inputA =  self.Atrace[l1-1]
 			hiddenA = self.Atrace[l1]
@@ -261,13 +303,6 @@ class AEANNmodel(nn.Module):
 			#	self.layersB = nn.ModuleList(layersListB)	#bias cannot be calculated using this method
 			loss = None
 			accuracy = None
-		elif(trainingUpdateImplementation=="backprop" or finalLayer):
-			layerIndex = self.getLayerIndex(l1)
-			loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
-			opt = optim[layerIndex]
-			opt.zero_grad()
-			loss.backward()
-			opt.step()
 		return loss, accuracy
 
 	def calculateLossAccuracy(self, pred, target, lossFunction, calculateAccuracy=False):
