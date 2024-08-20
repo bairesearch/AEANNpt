@@ -205,7 +205,7 @@ if(useTabularDataset):
 		datasetNormalise = True
 		datasetNormaliseClassValues = True
 		#trainNumberOfEpochs = 100
-		numberOfLayers = 4
+		#numberOfLayers = 4
 		datasetRepeat = True	#enable better sampling by dataloader with high batchSize (required if batchSize ~= datasetSize)
 		if(datasetRepeat):
 			datasetRepeatSize = 10

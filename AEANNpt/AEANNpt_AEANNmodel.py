@@ -58,6 +58,7 @@ class AEANNmodel(nn.Module):
 		layersLinearListB.append(None)	#input layer i=0
 		layersListB.append(None)	#input layer i=0
 		self.n_h = self.generateLayerSizeList()
+		print("self.n_h = ", self.n_h)
 		
 		for l1 in range(1, config.numberOfLayers+1):	
 			if(supportSkipLayers):
@@ -124,7 +125,7 @@ class AEANNmodel(nn.Module):
 
 	def generateLayerSizeList(self):
 		n_h = [None]*(self.config.numberOfLayers+1)
-		for l1 in range(1, self.config.numberOfLayers+1):
+		for l1 in range(0, self.config.numberOfLayers+1):
 			if(l1 == 0):
 				n_h[l1] = self.config.inputLayerSize
 			elif(l1 == numberOfLayers):
@@ -150,16 +151,20 @@ class AEANNmodel(nn.Module):
 		
 		for l1 in range(1, maxLayer+1):
 			#print("l1 = ", l1)
+			#print("self.config.numberOfLayers = ", self.config.numberOfLayers)
 			
 			A, Z, outputTarget = self.neuralNetworkPropagationLayerForward(l1, AprevLayer, autoencoder)
-
+			if(trainingUpdateImplementation=="hebbian"):
+				self.Ztrace[l1] = Z
+				self.Atrace[l1] = A
+			
 			if(autoencoder):
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
 				else:
 					outputPred = self.neuralNetworkPropagationLayerBackwardAutoencoder(l1, A)
 					if(trainOrTest):
-						self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionBackward)	#first layer optimiser is defined at i=0 
+						self.trainLayer(l1, outputPred, outputTarget, optim, self.lossFunctionBackward)	#first layer optimiser is defined at i=0 
 			else:
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
@@ -168,7 +173,7 @@ class AEANNmodel(nn.Module):
 			if(l1 == self.config.numberOfLayers):
 				outputTarget = y
 				if(trainOrTest):
-					loss, accuracy = self.trainLayer(self.getLayerIndex(l1), outputPred, outputTarget, optim, self.lossFunctionFinal, calculateAccuracy=True)
+					loss, accuracy = self.trainLayer(l1, outputPred, outputTarget, optim, self.lossFunctionFinal, calculateAccuracy=True, finalLayer=True)
 				else:
 					loss, accuracy = self.calculateLossAccuracy(outputPred, outputTarget,  self.lossFunctionFinal, calculateAccuracy=True)
 				
@@ -184,12 +189,85 @@ class AEANNmodel(nn.Module):
 		layerIndex = l1-1
 		return layerIndex
 	
-	def trainLayer(self, layerIndex, pred, target, optim, lossFunction, calculateAccuracy=False):
-		loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
-		opt = optim[layerIndex]
-		opt.zero_grad()
-		loss.backward()
-		opt.step()
+	def calculateActivationDerivative(self, A):
+		Aactive = (A > 0).float()	#derivative of relu
+		return Aactive
+	
+	def calculateMSE(self, pred, target):
+		mse_per_neuron = (pred - target).mean(dim=0)
+		#squared_differences = (pred - target) ** 2
+		#mse_per_neuron = squared_differences.mean(dim=0)
+		return mse_per_neuron
+	
+	def trainLayer(self, l1, pred, target, optim, lossFunction, calculateAccuracy=False, finalLayer=False):
+		if(trainingUpdateImplementation=="hebbian" and not finalLayer):
+			#TODO: support supportSkipLayers
+			print("l1 = ", l1)
+			# backpropagation approximation notes:
+				# error_L = (y_L - A_L) [sign reversal]
+				# error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l) {~A_l}
+				# dC/dB = error_l
+				# dC/dW = A_l-1 * error_l
+				# Bnew = B+dC/dB [sign reversal]
+				# Wnew = W+dC/dW [sign reversal]
+			IOerror = self.calculateMSE(pred, target)	#error_L = (A_L - y_L)
+			print("IOerror = ", IOerror)
+			inputA =  self.Atrace[l1-1]
+			hiddenA = self.Atrace[l1]
+			hiddenAactive = self.calculateActivationDerivative(hiddenA)
+			#print("self.layersLinearB[l1] = ", self.layersLinearB[l1])
+			ihWeight = self.layersLinearF[l1].weight
+			hoWeight = self.layersLinearB[l1].weight
+			print("ihWeight = ", ihWeight)
+			print("hoWeight = ", hoWeight)
+			#print("IOerror = ", IOerror)
+			#print("hiddenAactive = ", hiddenAactive)
+			hiddenError = pt.matmul(IOerror.unsqueeze(0), hoWeight)*hiddenAactive	 #backprop: error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l)	#hidden neuron error must be passed back from axons to dendrites
+			#print("hiddenError = ", hiddenError)
+			ihdCdW = pt.matmul(inputA.transpose(0, 1), hiddenError)	#dC/dW = A_l-1 * error_l
+			#print("hiddenA = ", hiddenA)	#64, 10
+			#print("IOerror = ", IOerror)
+			IOerrorExpanded = IOerror.unsqueeze(0).expand(batchSize, -1)	#expand to batch dim	#64,5
+			#print("IOerrorExpanded = ", IOerrorExpanded)
+			hodCdW = pt.matmul(hiddenA.transpose(0, 1), IOerrorExpanded)	#dC/dW = A_l-1 * error_l
+			ihdCdB = pt.mean(hiddenError, dim=0)	#error_l
+			hodCdB = IOerror	#error_l
+			
+			ihdCdW = ihdCdW.transpose(0, 1)*learningRate
+			hodCdW = hodCdW.transpose(0, 1)*learningRate
+			ihdCdB = ihdCdB*learningRate
+			hodCdB = hodCdB*learningRate
+			print("ihdCdW = ", ihdCdW)
+			print("hodCdW = ", hodCdW)
+			print("ihdCdB = ", ihdCdB)
+			print("hodCdB = ", hodCdB)
+			ihB = self.layersLinearF[l1].bias
+			ihW = self.layersLinearF[l1].weight
+			hoB = self.layersLinearB[l1].bias
+			hoW = self.layersLinearB[l1].weight
+			#print("ihW = ", ihW)
+			#print("hoW = ", hoW)
+			#print("ihB = ", ihB)
+			#print("hoB = ", hoB)
+			ihBnew = nn.Parameter(ihB-ihdCdB)	#Bnew = B-dC/dB
+			ihWnew = nn.Parameter(ihW-ihdCdW)	#Wnew = W-dC/dW
+			hoBnew = nn.Parameter(hoB-hodCdB)	#Bnew = B-dC/dB
+			hoWnew = nn.Parameter(hoW-hodCdW)	#Wnew = W-dC/dW
+			self.layersLinearF[l1].bias = ihBnew
+			self.layersLinearF[l1].weight = ihWnew
+			self.layersLinearB[l1].bias = hoBnew
+			self.layersLinearB[l1].weight = hoWnew
+			#if(supportSkipLayers):
+			#	self.layersB = nn.ModuleList(layersListB)	#bias cannot be calculated using this method
+			loss = None
+			accuracy = None
+		elif(trainingUpdateImplementation=="backprop" or finalLayer):
+			layerIndex = self.getLayerIndex(l1)
+			loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
+			opt = optim[layerIndex]
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
 		return loss, accuracy
 
 	def calculateLossAccuracy(self, pred, target, lossFunction, calculateAccuracy=False):
