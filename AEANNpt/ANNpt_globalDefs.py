@@ -1,7 +1,7 @@
 """ANNpt_globalDefs.py
 
 # Author:
-Richard Bruce Baxter - Copyright (c) 2023-2024 Baxter AI (baxterai.com)
+Richard Bruce Baxter - Copyright (c) 2023-2025 Baxter AI (baxterai.com)
 
 # License:
 MIT License
@@ -60,20 +60,16 @@ if(useLinearSublayers):
 else:
 	linearSublayersNumber = 1
 	
-debugSmallNetwork = False
-if(debugSmallNetwork):
-	batchSize = 2
-	numberOfLayers = 4
-	hiddenLayerSize = 5	
-	trainNumberOfEpochs = 1
-else:
-	batchSize = 64
-	numberOfLayers = 4
-	hiddenLayerSize = 15	#5
-	#hiddenLayerSize = 10
-	trainNumberOfEpochs = 10
+
+#default network hierarchy parameters (overwritten by specific dataset defaults): 
+batchSize = 64
+numberOfLayers = 4	#default: 4
+hiddenLayerSize = 10	#default: 10
+trainNumberOfEpochs = 10	#default: 10
 
 #initialise (dependent vars);
+debugSmallNetwork = False
+trainNumberOfEpochsHigh = False
 inputLayerInList = True
 outputLayerInList = True
 useCNNlayers = False
@@ -146,29 +142,42 @@ datasetNormaliseClassValues = False	#reformat class values from 0.. ; contiguous
 datasetLocalFile = False
 
 
+learningRate = 0.005	#0.005	#0.0001
+
+datasetCorrectMissingValues = False	#initialise (dependent var)
+datasetConvertClassTargetColumnFloatToInt = False	#initialise (dependent var)
 dataloaderRepeatSampler = False	#initialise (dependent var)
 dataloaderRepeatLoop = False	#initialise (dependent var)	#legacy (depreciate)
 if(useTabularDataset):
-	#datasetName = 'tabular-benchmark'
-	#datasetName = 'blog-feedback'
-	#datasetName = 'titanic'
-	#datasetName = 'red-wine'
-	#datasetName = 'breast-cancer-wisconsin'
-	#datasetName = 'diabetes-readmission'
-	datasetName = 'new-thyroid'
+	#datasetName = 'tabular-benchmark'	#expected test accuracy: 100%
+	#datasetName = 'blog-feedback'	#expected test accuracy: ~72%
+	#datasetName = 'titanic'	#expected test accuracy: ~87%
+	#datasetName = 'red-wine'	#expected test accuracy: ~90%
+	#datasetName = 'breast-cancer-wisconsin'	#expected test accuracy: ~55%
+	#datasetName = 'diabetes-readmission'	#expected test accuracy: ~%
+	datasetName = 'new-thyroid'	#expected test accuracy: 100%
 	if(datasetName == 'tabular-benchmark'):
 		datasetNameFull = 'inria-soda/tabular-benchmark'
 		classFieldName = 'class'
 		trainFileName = 'clf_cat/albert.csv'
 		testFileName = 'clf_cat/albert.csv'
 		datasetNormalise = True
+		datasetShuffle = True	#raw dataset is not shuffled
+		numberOfLayers = 4
+		hiddenLayerSize = 10
+		trainNumberOfEpochs = 1
 	elif(datasetName == 'blog-feedback'):
 		datasetNameFull = 'wwydmanski/blog-feedback'
 		classFieldName = 'target'
 		trainFileName = 'train.csv'
 		testFileName = 'test.csv'
 		datasetNormalise = True
-		datasetNormaliseClassValues = True	#int: not contiguous	#CHECKTHIS
+		#datasetNormaliseClassValues = True	#int: not contiguous	#alternate method (slower)
+		datasetConvertClassTargetColumnFloatToInt = True	#int: not contiguous
+		learningRate = 0.001	#default:  0.001
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 800	#default: 800
+		trainNumberOfEpochs = 1	#default: 1
 	elif(datasetName == 'titanic'):
 		datasetNameFull = 'victor/titanic'
 		classFieldName = '2urvived'
@@ -176,6 +185,12 @@ if(useTabularDataset):
 		testFileName = 'train_and_test2.csv'	#test
 		datasetReplaceNoneValues = True
 		datasetNormalise = True
+		datasetCorrectMissingValues = True
+		datasetShuffle = True	#raw dataset is not completely shuffled
+		learningRate = 0.001	#default:  0.001
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 100	#default: 100
+		trainNumberOfEpochs = 10	#default: 10
 	elif(datasetName == 'red-wine'):
 		datasetNameFull = 'lvwerra/red-wine'
 		classFieldName = 'quality'
@@ -183,6 +198,10 @@ if(useTabularDataset):
 		testFileName = 'winequality-red.csv'
 		datasetNormaliseClassValues = True	#int: not start at 0
 		datasetNormalise = True
+		learningRate = 0.001	#default:  0.001
+		numberOfLayers = 6	#default: 6
+		hiddenLayerSize = 100	#default: 100
+		trainNumberOfEpochs = 100	#default: 100
 	elif(datasetName == 'breast-cancer-wisconsin'):
 		datasetNameFull = 'scikit-learn/breast-cancer-wisconsin'
 		classFieldName = 'diagnosis'
@@ -191,12 +210,21 @@ if(useTabularDataset):
 		datasetReplaceNoneValues = True
 		datasetNormaliseClassValues = True	#string: B/M	#requires conversion of target string B/M to int
 		datasetNormalise = True
+		datasetCorrectMissingValues = True
+		datasetShuffle = True	#raw dataset is not completely shuffled
+		learningRate = 0.001	#default:  0.001
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 20	#default: 100
+		trainNumberOfEpochs = 10	#default: 10
 	elif(datasetName == 'diabetes-readmission'):
 		datasetNameFull = 'imodels/diabetes-readmission'
 		classFieldName = 'readmitted'
 		trainFileName = 'train.csv'
 		testFileName = 'test.csv'	
 		datasetNormalise = True
+		numberOfLayers = 4
+		hiddenLayerSize = 10
+		trainNumberOfEpochs = 1
 	elif(datasetName == 'new-thyroid'):
 		classFieldName = 'class'
 		trainFileName = 'new-thyroid.csv'
@@ -204,8 +232,9 @@ if(useTabularDataset):
 		datasetLocalFile = True	
 		datasetNormalise = True
 		datasetNormaliseClassValues = True
-		#trainNumberOfEpochs = 100
-		#numberOfLayers = 4
+		numberOfLayers = 4
+		hiddenLayerSize = 10
+		trainNumberOfEpochs = 10
 		datasetRepeat = True	#enable better sampling by dataloader with high batchSize (required if batchSize ~= datasetSize)
 		if(datasetRepeat):
 			datasetRepeatSize = 10
@@ -219,16 +248,21 @@ if(useTabularDataset):
 		if(dataloaderRepeatSampler):
 			dataloaderRepeatSamplerCustom = False	#no tqdm visualisation
 		
-
+if(trainNumberOfEpochsHigh):
+	trainNumberOfEpochs = trainNumberOfEpochs*4
+	
 if(debugSmallBatchSize):
 	batchSize = 10
-
+if(debugSmallNetwork):
+	batchSize = 2
+	numberOfLayers = 4
+	hiddenLayerSize = 5	
+	trainNumberOfEpochs = 1
+	
 printAccuracyRunningAverage = True
 if(printAccuracyRunningAverage):
 	runningAverageBatches = 10
 
-
-learningRate = 0.005	#0.005	#0.0001
 
 
 relativeFolderLocations = False

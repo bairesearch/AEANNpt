@@ -1,7 +1,7 @@
 """ANNpt_data.py
 
 # Author:
-Richard Bruce Baxter - Copyright (c) 2023-2024 Baxter AI (baxterai.com)
+Richard Bruce Baxter - Copyright (c) 2023-2025 Baxter AI (baxterai.com)
 
 # License:
 MIT License
@@ -27,6 +27,8 @@ if(useImageDataset):
 	import torchvision
 	import torchvision.transforms as transforms
 
+debugSaveDatasetToCSV = False	#output dataset to csv file for manual checks
+
 def loadDataset():
 	if(useTabularDataset):
 		return loadDatasetTabular()
@@ -40,6 +42,12 @@ def loadDatasetTabular():
 		dataset = load_dataset('csv', data_files={"train":trainFileNameFull, "test":testFileNameFull})
 	else:
 		dataset = load_dataset(datasetNameFull, data_files={"train":trainFileName, "test":testFileName})
+
+	if(debugSaveDatasetToCSV):
+		for split in dataset.keys():  # Usually 'train', 'test', etc.
+			output_file = f"{datasetName}_{split}.csv"
+			dataset[split].to_csv(output_file)
+			print(f"Saved {split} split to {output_file}")
 
 	if(datasetNormalise):
 		dataset['train'] = normaliseDataset(dataset['train'])
@@ -55,23 +63,44 @@ def loadDatasetTabular():
 	if(datasetNormaliseClassValues):
 		dataset['train'] = normaliseClassValues(dataset['train'])
 		dataset['test'] = normaliseClassValues(dataset['test'])
-	
+	else:
+		if(datasetConvertClassTargetColumnFloatToInt):
+			dataset['train'] = convertClassTargetColumnFloatToInt(dataset['train'])
+			dataset['test'] = convertClassTargetColumnFloatToInt(dataset['test'])
+			
 	return dataset
 
+def convertClassTargetColumnFloatToInt(dataset):
+	classDataList = dataset[classFieldName]
+	classDataList = [int(value) for value in classDataList]
+	dataset = dataset.remove_columns(classFieldName)
+	dataset = dataset.add_column(classFieldName, classDataList)
+	return dataset
+
+
 def normaliseDataset(dataset):
+	#print("normaliseDataset: len(dataset.features) = ", len(dataset.features))
 	datasetSize = getDatasetSize(dataset)
-	for featureName in list(dataset.features):
+	for featureIndex, featureName in enumerate(list(dataset.features)):
+		#print("featureIndex = ", featureIndex)
 		if(featureName != classFieldName):
-			featureDataList = []
-			for i in range(datasetSize):
-				row = dataset[i]
-				featureCell = row[featureName]
-				featureDataList.append(featureCell)
+			if(datasetCorrectMissingValues):
+				featureDataList = []
+				for i in range(datasetSize):
+					row = dataset[i]
+					featureCell = row[featureName]
+					if(featureCell == None):
+						featureCell = 0
+					featureDataList.append(featureCell)
+			else:
+				featureDataList = dataset[featureName]
 			featureData = np.array(featureDataList)
 			if(datasetNormaliseMinMax):
 				featureMin = np.amin(featureData)
 				featureMax = np.amax(featureData)
-				featureData = (featureData - featureMin) / (featureMax - featureMin) #featureData/featureMax
+				#if(featureMax - featureMin == 0):
+				#	print("warning: (featureMax - featureMin == 0)")
+				featureData = (featureData - featureMin) / (featureMax - featureMin + 1e-8) #featureData/featureMax
 			elif(datasetNormaliseStdAvg):
 				featureMean = np.mean(featureData)
 				featureStd = np.std(featureData)
@@ -103,9 +132,11 @@ def normaliseClassValues(dataset):
 	classIndexDict = {}
 	classFieldNew = []
 	datasetSize = getDatasetSize(dataset)
+	#print("datasetSize = ", datasetSize)
 	numberOfClasses = 0
 	for i in range(datasetSize):
 		row = dataset[i]
+		#print("i = ", i)
 		
 		targetString = row[classFieldName]
 		if(targetString in classIndexDict):

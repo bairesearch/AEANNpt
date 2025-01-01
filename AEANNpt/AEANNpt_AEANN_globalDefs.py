@@ -1,7 +1,7 @@
 """AEANNpt_AEANN_globalDefs.py
 
 # Author:
-Richard Bruce Baxter - Copyright (c) 2024 Baxter AI (baxterai.com)
+Richard Bruce Baxter - Copyright (c) 2024-2025 Baxter AI (baxterai.com)
 
 # License:
 MIT License
@@ -69,14 +69,8 @@ useInbuiltCrossEntropyLossFunction = True	#required
 simulatedDendriticBranches = False	#optional	#performTopK selection of neurons based on local inhibition - equivalent to multiple independent fully connected weights per neuron (SDBANN)
 useLinearSublayers = False
 
-
-#network hierarchy parameters: 
-#override ANNpt_globalDefs default model parameters;
-batchSize = 64
-numberOfLayers = 4	#default: 4
-hiddenLayerSize = 10	#default: 10
-trainNumberOfEpochs = 10	#default: 10
-
+if(useBreakaway):
+	trainNumberOfEpochsHigh = True	#useAutoencoder+useBreakaway+AEANNtrainGreedy can require ~4x more epochs to train
 
 #CONSIDER: disable bias;
 
