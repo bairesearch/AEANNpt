@@ -185,8 +185,9 @@ class AEANNmodel(nn.Module):
 					loss, accuracy = self.trainLayerFinal(l1, outputPred, outputTarget, optim, calculateAccuracy=True)
 				else:
 					loss, accuracy = self.calculateLossAccuracy(outputPred, outputTarget, self.lossFunctionFinal, calculateAccuracy=True)
-				
-			A = A.detach()	#only train weights for layer l1
+			
+			if(AEANNtrainGreedy):
+				A = A.detach()	#only train weights for layer l1 (greedy training)
 
 			AprevLayer = A
 			self.Ztrace[l1] = Z

@@ -22,11 +22,12 @@ debugSmallNetwork = False
 
 useAutoencoder = True	#only disable for debug
 useBreakaway = True	#optional 	#also condition training of new hidden layers on directly connected output
+AEANNtrainGreedy = True	#only train weights for layer l1 (greedy training)
 
 #autoencoder architecture parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation
 #autoencoderPrediction = "inputLayer" 	#autoencoder (backwards connections) predicts input layer 	#orig AEORtf autoencoder_simulation2 implementation
-supportSkipLayers = False #fully connected skip layer network
+supportSkipLayers = True #fully connected skip layer network
 if(supportSkipLayers):
 	autoencoderPrediction = "allPreviousLayers"		#optional	#orig AEANNtf implementation
 	supportSkipLayersF = True
