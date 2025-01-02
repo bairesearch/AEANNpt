@@ -168,7 +168,7 @@ class AEANNmodel(nn.Module):
 				self.Ztrace[l1] = Z
 				self.Atrace[l1] = A
 			
-			if(autoencoder):
+			if(autoencoder or useBreakaway):
 				if(l1 == self.config.numberOfLayers):
 					outputPred = Z	#activation function softmax is applied by self.lossFunctionFinal = nn.CrossEntropyLoss()
 				else:
@@ -203,10 +203,8 @@ class AEANNmodel(nn.Module):
 		Aactive = (A > 0).float()	#derivative of relu
 		return Aactive
 	
-	def calculateMSE(self, pred, target):
-		mse_per_neuron = (pred - target).mean(dim=0)
-		#squared_differences = (pred - target) ** 2
-		#mse_per_neuron = squared_differences.mean(dim=0)
+	def calcMSEDerivative(self, pred, target):
+		mse_per_neuron = (pred - target)
 		return mse_per_neuron
 
 	def trainLayerFinal(self, l1, pred, target, optim, calculateAccuracy=False):
@@ -234,76 +232,88 @@ class AEANNmodel(nn.Module):
 				loss = Iloss
 				accuracy = Iaccuracy
 			if(useBreakaway):
-				assert useAutoencoder
 				OlossFunction = OlossFunction=self.lossFunctionOutput
 				Oloss, Oaccuracy = self.calculateLossAccuracy(Opred, Otarget, OlossFunction, calculateAccuracy)
-				loss = Iloss + Oloss
-				accuracy = (Iaccuracy + Oaccuracy)/2
+				if(useAutoencoder):
+					loss = Iloss + Oloss
+					accuracy = (Iaccuracy + Oaccuracy)/2
+				else:
+					loss = Oloss
+					accuracy = Oaccuracy
 			opt = optim[layerIndex]
 			opt.zero_grad()
 			loss.backward()
 			opt.step()
 		elif(trainingUpdateImplementation=="hebbian"):
-			#TODO: support supportSkipLayers
-			print("l1 = ", l1)
+			#print("l1 = ", l1)
+
 			# backpropagation approximation notes:
-				# error_L = (y_L - A_L) [sign reversal]
+				# error_L = (A_L - y_L)
 				# error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l) {~A_l}
 				# dC/dB = error_l
 				# dC/dW = A_l-1 * error_l
-				# Bnew = B+dC/dB [sign reversal]
-				# Wnew = W+dC/dW [sign reversal]
-			IOerror = self.calculateMSE(Ipred, Itarget)	#error_L = (A_L - y_L)
-			print("IOerror = ", IOerror)
-			inputA =  self.Atrace[l1-1]
-			hiddenA = self.Atrace[l1]
-			hiddenAactive = self.calculateActivationDerivative(hiddenA)
-			#print("self.layersLinearB[l1] = ", self.layersLinearB[l1])
-			ihWeight = self.layersLinearF[l1].weight
-			hoWeight = self.layersLinearB[l1].weight
-			print("ihWeight = ", ihWeight)
-			print("hoWeight = ", hoWeight)
-			#print("IOerror = ", IOerror)
-			#print("hiddenAactive = ", hiddenAactive)
-			hiddenError = pt.matmul(IOerror.unsqueeze(0), hoWeight)*hiddenAactive	 #backprop: error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l)	#hidden neuron error must be passed back from axons to dendrites
-			#print("hiddenError = ", hiddenError)
-			ihdCdW = pt.matmul(inputA.transpose(0, 1), hiddenError)	#dC/dW = A_l-1 * error_l
-			#print("hiddenA = ", hiddenA)	#64, 10
-			#print("IOerror = ", IOerror)
-			IOerrorExpanded = IOerror.unsqueeze(0).expand(batchSize, -1)	#expand to batch dim	#64,5
-			#print("IOerrorExpanded = ", IOerrorExpanded)
-			hodCdW = pt.matmul(hiddenA.transpose(0, 1), IOerrorExpanded)	#dC/dW = A_l-1 * error_l
-			ihdCdB = pt.mean(hiddenError, dim=0)	#error_l
-			hodCdB = IOerror	#error_l
+				# Bnew = B-dC/dB
+				# Wnew = W-dC/dW
+
+			iA = self.Atrace[l1-1]
+			hA = self.Atrace[l1]	#or hZ = self.Ztrace[l1]
 			
-			ihdCdW = ihdCdW.transpose(0, 1)*learningRate
-			hodCdW = hodCdW.transpose(0, 1)*learningRate
+			#hi[+ho] activation deltas:
+			hZderivative = self.calculateActivationDerivative(hA)	#or hZ
+			if(useAutoencoder):
+				iError2 = self.calcMSEDerivative(Ipred, Itarget)	#shape: batSize*iSize
+				hiWeight = self.layersLinearB[l1].weight	#shape: iSize*hSize
+				hErrorI = pt.matmul(iError2, hiWeight)*hZderivative	#backprop algorithm: error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l)	#hidden neuron error must be passed back from axons to dendrites	#shape: batSize*hSize
+				hError = hErrorI	#shape: batSize*hSize
+			if(useBreakaway):
+				oTargetOneHot = pt.nn.functional.one_hot(Otarget, num_classes=self.config.numberOfClasses)
+				oError2 = self.calcMSEDerivative(Opred, oTargetOneHot)	#shape: batSize*iSize
+				hoWeight = self.layersLinearO[l1].weight	# shape: (oSize, hSize)
+				hErrorO = pt.matmul(oError2, hoWeight)*hZderivative
+				if(useAutoencoder):
+					hError = (hErrorI+hErrorO)/2
+				else:
+					hError = hErrorO
+			
+			#ih activation deltas:
+			iZderivative = self.calculateActivationDerivative(iA)	#or iZ
+			ihWeight = self.layersLinearF[l1].weight	#shape: hSize*iSize
+			iError1 = pt.matmul(hError, ihWeight)*iZderivative	#backprop algorithm: error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l)	#hidden neuron error must be passed back from axons to dendrites	#shape: batSize*iSize
+			
+			#hi[+ho] parameter deltas:
+			if(useAutoencoder):
+				hidCdW = pt.matmul(iError2.transpose(0, 1), hA) / batchSize	#backprop algorithm: dC/dW = A_l-1 * error_l
+				hidCdB = pt.mean(iError2, dim=0)	#error_l
+			if(useBreakaway):
+				hodCdW = pt.matmul(oError2.transpose(0, 1), hA) / batchSize	#backprop algorithm: dC/dW = A_l-1 * error_l	
+				hodCdB = pt.mean(oError2, dim=0)	#error_l
+			
+			#ih parameter deltas:
+			ihdCdW = pt.matmul(hError.transpose(0, 1), iA) / batchSize	#backprop algorithm: dC/dW = A_l-1 * error_l
+			ihdCdB = pt.mean(hError, dim=0)	#error_l
+			
+			ihdCdW = ihdCdW*learningRate
 			ihdCdB = ihdCdB*learningRate
-			hodCdB = hodCdB*learningRate
-			print("ihdCdW = ", ihdCdW)
-			print("hodCdW = ", hodCdW)
-			print("ihdCdB = ", ihdCdB)
-			print("hodCdB = ", hodCdB)
-			ihB = self.layersLinearF[l1].bias
-			ihW = self.layersLinearF[l1].weight
-			hoB = self.layersLinearB[l1].bias
-			hoW = self.layersLinearB[l1].weight
-			#print("ihW = ", ihW)
-			#print("hoW = ", hoW)
-			#print("ihB = ", ihB)
-			#print("hoB = ", hoB)
-			ihBnew = nn.Parameter(ihB-ihdCdB)	#Bnew = B-dC/dB
-			ihWnew = nn.Parameter(ihW-ihdCdW)	#Wnew = W-dC/dW
-			hoBnew = nn.Parameter(hoB-hodCdB)	#Bnew = B-dC/dB
-			hoWnew = nn.Parameter(hoW-hodCdW)	#Wnew = W-dC/dW
-			self.layersLinearF[l1].bias = ihBnew
-			self.layersLinearF[l1].weight = ihWnew
-			self.layersLinearB[l1].bias = hoBnew
-			self.layersLinearB[l1].weight = hoWnew
-			#if(supportSkipLayers):
-			#	self.layersB = nn.ModuleList(layersListB)	#bias cannot be calculated using this method
+			if(useAutoencoder):
+				hidCdW = hidCdW*learningRate
+				hidCdB = hidCdB*learningRate
+			if(useBreakaway):
+				hodCdW = hodCdW*learningRate
+				hodCdB = hodCdB*learningRate
+			
+			with pt.no_grad():
+				self.layersLinearF[l1].weight -= ihdCdW
+				self.layersLinearF[l1].bias -= ihdCdB
+				if(useAutoencoder):
+					self.layersLinearB[l1].weight -= hidCdW
+					self.layersLinearB[l1].bias -= hidCdB
+				if(useBreakaway):
+					self.layersLinearO[l1].weight -= hodCdW
+					self.layersLinearO[l1].bias   -= hodCdB
+
 			loss = None
 			accuracy = None
+			
 		return loss, accuracy
 
 	def calculateLossAccuracy(self, pred, target, lossFunction, calculateAccuracy=False):

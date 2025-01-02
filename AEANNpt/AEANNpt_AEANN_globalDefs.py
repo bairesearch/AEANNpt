@@ -39,9 +39,9 @@ else:
 	supportSkipLayersF = False
 	supportSkipLayersB = False
 
-if(useBreakaway):
-	trainingUpdateImplementation = "backprop"
-else:	
+if(supportSkipLayers):
+	trainingUpdateImplementation = "backprop"	#supportSkipLayers [autoencoderPrediction = "allPreviousLayers"] does not yet support hebbian
+else:
 	#training update implementation parameters:
 	symmetricalAEsubnetIOlayers = False	#initialise (dependent var);
 
@@ -53,13 +53,15 @@ else:
 	if(symmetricalAEsubnetIOlayers):
 		#trainingUpdateImplementation = "hebbian"	#custom bio plausible approximation of single hidden layer AEANN backprop
 		trainingUpdateImplementation = "backprop"
+		if(trainingUpdateImplementation == "hebbian"):
+			learningRate = 0.0001
 	else:
 		trainingUpdateImplementation = "backprop"	# single hidden layer AEANN backprop
 	print("trainingUpdateImplementation = ", trainingUpdateImplementation)
 
 trainLocal = True
 activationFunctionTypeForward = "relu"
-activationFunctionTypeBackward = "sigmoid"	#CHECKTHSI #use sigmoid for consistency with AEANNtf
+activationFunctionTypeBackward = "sigmoid"	#CHECKTHIS #use sigmoid for consistency with AEANNtf
 
 
 #loss function parameters:

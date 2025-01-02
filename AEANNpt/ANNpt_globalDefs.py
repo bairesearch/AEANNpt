@@ -62,7 +62,7 @@ else:
 	
 
 #default network hierarchy parameters (overwritten by specific dataset defaults): 
-batchSize = 64
+batchSize = 64	 #default: 64	#debug: 2
 numberOfLayers = 4	#default: 4
 hiddenLayerSize = 10	#default: 10
 trainNumberOfEpochs = 10	#default: 10
@@ -154,7 +154,7 @@ if(useTabularDataset):
 	#datasetName = 'titanic'	#expected test accuracy: ~87%
 	#datasetName = 'red-wine'	#expected test accuracy: ~90%
 	#datasetName = 'breast-cancer-wisconsin'	#expected test accuracy: ~55%
-	#datasetName = 'diabetes-readmission'	#expected test accuracy: ~%
+	#datasetName = 'diabetes-readmission'	#expected test accuracy: 100%
 	datasetName = 'new-thyroid'	#expected test accuracy: 100%
 	if(datasetName == 'tabular-benchmark'):
 		datasetNameFull = 'inria-soda/tabular-benchmark'
