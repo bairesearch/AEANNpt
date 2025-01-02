@@ -62,6 +62,7 @@ else:
 	
 
 #default network hierarchy parameters (overwritten by specific dataset defaults): 
+learningRate = 0.005	#0.005	#0.0001
 batchSize = 64	 #default: 64	#debug: 2
 numberOfLayers = 4	#default: 4
 hiddenLayerSize = 10	#default: 10
@@ -142,7 +143,6 @@ datasetNormaliseClassValues = False	#reformat class values from 0.. ; contiguous
 datasetLocalFile = False
 
 
-learningRate = 0.005	#0.005	#0.0001
 
 datasetCorrectMissingValues = False	#initialise (dependent var)
 datasetConvertClassTargetColumnFloatToInt = False	#initialise (dependent var)
@@ -163,6 +163,7 @@ if(useTabularDataset):
 		testFileName = 'clf_cat/albert.csv'
 		datasetNormalise = True
 		datasetShuffle = True	#raw dataset is not shuffled
+		learningRate = 0.005
 		numberOfLayers = 4
 		hiddenLayerSize = 10
 		trainNumberOfEpochs = 1
@@ -222,6 +223,7 @@ if(useTabularDataset):
 		trainFileName = 'train.csv'
 		testFileName = 'test.csv'	
 		datasetNormalise = True
+		learningRate = 0.005
 		numberOfLayers = 4
 		hiddenLayerSize = 10
 		trainNumberOfEpochs = 1
@@ -232,6 +234,7 @@ if(useTabularDataset):
 		datasetLocalFile = True	
 		datasetNormalise = True
 		datasetNormaliseClassValues = True
+		learningRate = 0.005	#orig: learningRate = 0.005
 		numberOfLayers = 4
 		hiddenLayerSize = 10
 		trainNumberOfEpochs = 10

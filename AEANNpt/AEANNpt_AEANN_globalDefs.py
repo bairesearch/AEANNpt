@@ -20,11 +20,12 @@ AEANNpt AEANN globalDefs
 #debug parameters:
 debugSmallNetwork = False
 
-useAutoencoder = True	#only disable for debug
-useBreakaway = True	#optional 	#also condition training of new hidden layers on directly connected output
+#autoencoder architecture parameters:
+
+useAutoencoder = True	#only disable for debug/benchmark
+useBreakaway = True	#also condition training of new hidden layers on directly connected output
 AEANNtrainGreedy = True	#only train weights for layer l1 (greedy training)
 
-#autoencoder architecture parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation
 #autoencoderPrediction = "inputLayer" 	#autoencoder (backwards connections) predicts input layer 	#orig AEORtf autoencoder_simulation2 implementation
 supportSkipLayers = True #fully connected skip layer network
@@ -51,17 +52,17 @@ else:
 		symmetricalAEsubnetIOlayers = True
 
 	if(symmetricalAEsubnetIOlayers):
-		#trainingUpdateImplementation = "hebbian"	#custom bio plausible approximation of single hidden layer AEANN backprop
+		#trainingUpdateImplementation = "hebbian"	#custom bio plausible approximation of single hidden layer AEANN backprop	#incomplete
 		trainingUpdateImplementation = "backprop"
 		if(trainingUpdateImplementation == "hebbian"):
-			learningRate = 0.0001
+			learningRate = 0.0001	#currently requires lower learning rate
 	else:
 		trainingUpdateImplementation = "backprop"	# single hidden layer AEANN backprop
 	print("trainingUpdateImplementation = ", trainingUpdateImplementation)
 
-trainLocal = True
+trainLocal = True	#mandatory	#do not use general ANNpt_main training code, use custom AEANNpt_AEANNmodel training code	
 activationFunctionTypeForward = "relu"
-activationFunctionTypeBackward = "sigmoid"	#CHECKTHIS #use sigmoid for consistency with AEANNtf
+activationFunctionTypeBackward = "relu"	#default: relu	#orig: "sigmoid" (used sigmoid for consistency with AEANNtf)
 
 
 #loss function parameters:

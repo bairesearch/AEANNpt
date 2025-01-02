@@ -271,7 +271,7 @@ class AEANNmodel(nn.Module):
 				hoWeight = self.layersLinearO[l1].weight	# shape: (oSize, hSize)
 				hErrorO = pt.matmul(oError2, hoWeight)*hZderivative
 				if(useAutoencoder):
-					hError = (hErrorI+hErrorO)/2
+					hError = (hErrorI+hErrorO)	#OLD: /2
 				else:
 					hError = hErrorO
 			
