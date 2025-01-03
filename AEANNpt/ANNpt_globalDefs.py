@@ -64,7 +64,7 @@ else:
 #default network hierarchy parameters (overwritten by specific dataset defaults): 
 learningRate = 0.005	#0.005	#0.0001
 batchSize = 64	 #default: 64	#debug: 2
-numberOfLayers = 4	#default: 4
+numberOfLayers = 4	#default: 4	#counts hidden and output layers (not input layer)
 hiddenLayerSize = 10	#default: 10
 trainNumberOfEpochs = 10	#default: 10
 
@@ -139,118 +139,181 @@ if(useCustomWeightInitialisation):
 
 #initialise (dependent vars);
 datasetReplaceNoneValues = False
-datasetNormaliseClassValues = False	#reformat class values from 0.. ; contiguous (will also convert string to int)
+datasetConvertClassValues = False	#reformat class values from 0.. ; contiguous (will also convert string to int)
+datasetConvertFeatureValues = False	#reformat feature values from 0.. ; contiguous (will also convert string to int)
 datasetLocalFile = False
-
-
+datasetSpecifyDataFiles = True	#specify data file names in dataset (else automatically selected by huggingface)
+datasetHasTestSplit = True
+datasetHasSubsetType = False
 
 datasetCorrectMissingValues = False	#initialise (dependent var)
 datasetConvertClassTargetColumnFloatToInt = False	#initialise (dependent var)
 dataloaderRepeatSampler = False	#initialise (dependent var)
 dataloaderRepeatLoop = False	#initialise (dependent var)	#legacy (depreciate)
 if(useTabularDataset):
-	#datasetName = 'tabular-benchmark'	#expected test accuracy: 100%
-	#datasetName = 'blog-feedback'	#expected test accuracy: ~72%
-	#datasetName = 'titanic'	#expected test accuracy: ~87%
-	#datasetName = 'red-wine'	#expected test accuracy: ~90%
-	#datasetName = 'breast-cancer-wisconsin'	#expected test accuracy: ~55%
-	#datasetName = 'diabetes-readmission'	#expected test accuracy: 100%
-	datasetName = 'new-thyroid'	#expected test accuracy: 100%
+	#datasetName = 'tabular-benchmark'	#expected test accuracy: ~58%
+	#datasetName = 'blog-feedback'	#expected test accuracy: ~64%
+	#datasetName = 'titanic'	#expected test accuracy: ~88%
+	#datasetName = 'red-wine'	#expected test accuracy: ~33%
+	#datasetName = 'breast-cancer-wisconsin'	#expected test accuracy: ~33%
+	#datasetName = 'diabetes-readmission'	#expected test accuracy: ~58%
+	#datasetName = 'banking-marketing'	#expected test accuracy: ~74%	#third party benchmark accuracy: ~79.1%
+	#datasetName = 'adult_income_dataset'	#expected test accuracy: ~75% 	#third party benchmark accuracy: ~85.8%
+	#datasetName = 'covertype'	#expected test accuracy: ~%89 	#third party benchmark accuracy: ~97.1%
+	#datasetName = 'higgs'	#expected test accuracy: 85%	#third party benchmark accuracy: 73.8%	#https://archive.ics.uci.edu/dataset/280/higgs	#untested
+	datasetName = 'new-thyroid'	#expected test accuracy: ~50%
 	if(datasetName == 'tabular-benchmark'):
 		datasetNameFull = 'inria-soda/tabular-benchmark'
 		classFieldName = 'class'
 		trainFileName = 'clf_cat/albert.csv'
-		testFileName = 'clf_cat/albert.csv'
+		datasetHasTestSplit = False
 		datasetNormalise = True
-		datasetShuffle = True	#raw dataset is not shuffled
-		learningRate = 0.005
-		numberOfLayers = 4
-		hiddenLayerSize = 10
-		trainNumberOfEpochs = 1
+		#datasetShuffle = True	#raw dataset is not shuffled	#not required with dataloaderShuffle 
+		learningRate = 0.001
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 10	#default: 10
+		trainNumberOfEpochs = 1	#default: 1
 	elif(datasetName == 'blog-feedback'):
 		datasetNameFull = 'wwydmanski/blog-feedback'
 		classFieldName = 'target'
-		trainFileName = 'train.csv'
-		testFileName = 'test.csv'
+		datasetSpecifyDataFiles = False
 		datasetNormalise = True
-		#datasetNormaliseClassValues = True	#int: not contiguous	#alternate method (slower)
+		#datasetConvertClassValues = True	#int: not contiguous	#alternate method (slower)
 		datasetConvertClassTargetColumnFloatToInt = True	#int: not contiguous
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 800	#default: 800
+		hiddenLayerSize = 128	#default: 128	#orig: 800
 		trainNumberOfEpochs = 1	#default: 1
 	elif(datasetName == 'titanic'):
 		datasetNameFull = 'victor/titanic'
 		classFieldName = '2urvived'
-		trainFileName = 'train_and_test2.csv'	#train
-		testFileName = 'train_and_test2.csv'	#test
+		datasetSpecifyDataFiles = False
 		datasetReplaceNoneValues = True
 		datasetNormalise = True
 		datasetCorrectMissingValues = True
-		datasetShuffle = True	#raw dataset is not completely shuffled
+		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
 		hiddenLayerSize = 100	#default: 100
 		trainNumberOfEpochs = 10	#default: 10
+		datasetRepeat = True
+		if(datasetRepeat):
+			datasetRepeatSize = 10
 	elif(datasetName == 'red-wine'):
 		datasetNameFull = 'lvwerra/red-wine'
 		classFieldName = 'quality'
 		trainFileName = 'winequality-red.csv'
-		testFileName = 'winequality-red.csv'
-		datasetNormaliseClassValues = True	#int: not start at 0
+		datasetHasTestSplit = False
+		datasetConvertClassValues = True	#int: not start at 0
 		datasetNormalise = True
 		learningRate = 0.001	#default:  0.001
-		numberOfLayers = 6	#default: 6
-		hiddenLayerSize = 100	#default: 100
-		trainNumberOfEpochs = 100	#default: 100
+		numberOfLayers = 4	#default: 4	#external benchmark: 4
+		hiddenLayerSize = 100	#default: 100	#external benchmark; 64/128
+		trainNumberOfEpochs = 10	#default: 10	#note train accuracy continues to increase (overfit) with increasing epochs
+		datasetRepeat = True
+		if(datasetRepeat):
+			datasetRepeatSize = 10
 	elif(datasetName == 'breast-cancer-wisconsin'):
 		datasetNameFull = 'scikit-learn/breast-cancer-wisconsin'
 		classFieldName = 'diagnosis'
 		trainFileName = 'breast_cancer.csv'
-		testFileName = 'breast_cancer.csv'
+		datasetHasTestSplit = False
 		datasetReplaceNoneValues = True
-		datasetNormaliseClassValues = True	#string: B/M	#requires conversion of target string B/M to int
+		datasetConvertClassValues = True	#string: B/M
 		datasetNormalise = True
 		datasetCorrectMissingValues = True
-		datasetShuffle = True	#raw dataset is not completely shuffled
+		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 20	#default: 100
+		hiddenLayerSize = 20	#default: 20	#old: 100
 		trainNumberOfEpochs = 10	#default: 10
+		datasetRepeat = True
+		if(datasetRepeat):
+			datasetRepeatSize = 10
 	elif(datasetName == 'diabetes-readmission'):
 		datasetNameFull = 'imodels/diabetes-readmission'
 		classFieldName = 'readmitted'
-		trainFileName = 'train.csv'
-		testFileName = 'test.csv'	
+		datasetSpecifyDataFiles = False
 		datasetNormalise = True
 		learningRate = 0.005
 		numberOfLayers = 4
 		hiddenLayerSize = 10
 		trainNumberOfEpochs = 1
+	elif(datasetName == 'banking-marketing'):
+		datasetSpecifyDataFiles = False
+		datasetConvertFeatureValues = True	#required if they contain strings
+		datasetNameFull = 'Andyrasika/banking-marketing'
+		classFieldName = 'y'
+		datasetConvertClassValues = True	#string: yes/no
+		datasetNormalise = True
+		learningRate = 0.001
+		numberOfLayers = 5
+		hiddenLayerSize = 128
+		trainNumberOfEpochs = 1
+	elif(datasetName == 'adult_income_dataset'):
+		datasetSpecifyDataFiles = False
+		datasetConvertFeatureValues = True	#required if they contain strings
+		datasetHasTestSplit = False
+		datasetNameFull = 'meghana/adult_income_dataset'
+		classFieldName = 'income'
+		datasetConvertClassValues = True	#string: <=50K/>50K
+		datasetNormalise = True
+		learningRate = 0.001
+		numberOfLayers = 4
+		hiddenLayerSize = 256
+		trainNumberOfEpochs = 10	
+	elif(datasetName == 'covertype'):
+		datasetSpecifyDataFiles = False
+		datasetConvertFeatureValues = True	#required if they contain strings
+		datasetHasTestSplit = False
+		datasetHasSubsetType = True
+		datasetSubsetName = 'covertype'
+		datasetNameFull = 'mstz/covertype'
+		classFieldName = 'cover_type'
+		datasetNormalise = True
+		learningRate = 0.001
+		numberOfLayers = 6
+		hiddenLayerSize = 512
+		trainNumberOfEpochs = 10		#train performance increases with higher epochs
+	elif(datasetName == 'higgs'):
+		datasetLocalFile = True		#manually download from https://archive.ics.uci.edu/dataset/280/higgs
+		#datasetNameFull = 'mstz/higgs'	#jxie/higgs
+		classFieldName = 'y'
+		trainFileName = 'HIGGS.csv'	#CHECKTHIS
+		testFileName = 'HIGGS.csv'	#CHECKTHIS
+		datasetNormalise = True
+		learningRate = 0.001
+		numberOfLayers = 5
+		hiddenLayerSize = 256	#300
+		trainNumberOfEpochs = 1		
 	elif(datasetName == 'new-thyroid'):
 		classFieldName = 'class'
 		trainFileName = 'new-thyroid.csv'
-		testFileName = 'new-thyroid.csv'
+		datasetHasTestSplit = False
+		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		datasetLocalFile = True	
 		datasetNormalise = True
-		datasetNormaliseClassValues = True
-		learningRate = 0.005	#orig: learningRate = 0.005
-		numberOfLayers = 4
-		hiddenLayerSize = 10
-		trainNumberOfEpochs = 10
+		datasetConvertClassValues = True
+		learningRate = 0.005	#default: 0.001	#orig: 0.005
+		numberOfLayers = 4	#default: 4	#orig: 2
+		hiddenLayerSize = 10	#default: 10	#orig: 4
+		#numberOfLayers = 2
+		#hiddenLayerSize = 4
+		#batchSize = 1
+		trainNumberOfEpochs = 1	#default: 1
 		datasetRepeat = True	#enable better sampling by dataloader with high batchSize (required if batchSize ~= datasetSize)
 		if(datasetRepeat):
-			datasetRepeatSize = 10
-		dataloaderRepeat = True
+			datasetRepeatSize = 100	#for batchSize ~= 64
 	#elif ...
 
 	if(dataloaderRepeat):
 		dataloaderRepeatSize = 10	#number of repetitions
-		dataloaderRepeatSampler = True
 		dataloaderRepeatLoop = False	#legacy (depreciate)
+		dataloaderRepeatSampler = True
 		if(dataloaderRepeatSampler):
 			dataloaderRepeatSamplerCustom = False	#no tqdm visualisation
-		
+			assert not dataloaderShuffle	#dataloaderShuffle is not supported by dataloaderRepeatSampler
+	
 if(trainNumberOfEpochsHigh):
 	trainNumberOfEpochs = trainNumberOfEpochs*4
 	
@@ -266,7 +329,10 @@ printAccuracyRunningAverage = True
 if(printAccuracyRunningAverage):
 	runningAverageBatches = 10
 
-
+datasetSplitNameTrain = 'train'
+datasetSplitNameTest = 'test'
+if(not datasetHasTestSplit):
+	datasetTestSplitSize = 0.1
 
 relativeFolderLocations = False
 userName = 'user'	#default: user

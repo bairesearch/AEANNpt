@@ -58,9 +58,12 @@ else:
 			learningRate = 0.0001	#currently requires lower learning rate
 	else:
 		trainingUpdateImplementation = "backprop"	# single hidden layer AEANN backprop
-	print("trainingUpdateImplementation = ", trainingUpdateImplementation)
 
-trainLocal = True	#mandatory	#do not use general ANNpt_main training code, use custom AEANNpt_AEANNmodel training code	
+trainLocal = True	#use custom AEANNpt_AEANNmodel training code, do not use general ANNpt_main training code
+if(not useAutoencoder and not useBreakaway and not AEANNtrainGreedy):
+	#trainLocal = False	#optional #use of general ANNpt_main training code	#only disable for debug/benchmark
+	pass
+	
 activationFunctionTypeForward = "relu"
 activationFunctionTypeBackward = "relu"	#default: relu	#orig: "sigmoid" (used sigmoid for consistency with AEANNtf)
 
@@ -73,7 +76,7 @@ simulatedDendriticBranches = False	#optional	#performTopK selection of neurons b
 useLinearSublayers = False
 
 if(useBreakaway):
-	trainNumberOfEpochsHigh = True	#useAutoencoder+useBreakaway+AEANNtrainGreedy can require ~4x more epochs to train
+	trainNumberOfEpochsHigh = False	#useAutoencoder+useBreakaway+AEANNtrainGreedy can require ~4x more epochs to train
 
 #CONSIDER: disable bias;
 

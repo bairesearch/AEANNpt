@@ -188,7 +188,8 @@ class AEANNmodel(nn.Module):
 			
 			if(AEANNtrainGreedy):
 				A = A.detach()	#only train weights for layer l1 (greedy training)
-
+				Z = Z.detach()	#not required; added for robustness
+				
 			AprevLayer = A
 			self.Ztrace[l1] = Z
 			self.Atrace[l1] = A
@@ -211,10 +212,11 @@ class AEANNmodel(nn.Module):
 		lossFunction = self.lossFunctionFinal
 		layerIndex = self.getLayerIndex(l1)
 		loss, accuracy = self.calculateLossAccuracy(pred, target, lossFunction, calculateAccuracy)
-		opt = optim[layerIndex]
-		opt.zero_grad()
-		loss.backward()
-		opt.step()
+		if(trainLocal):
+			opt = optim[layerIndex]
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
 		return loss, accuracy
 				
 	def trainLayerHidden(self, l1, Ahidden, Itarget, optim, calculateAccuracy=False, Otarget=None):

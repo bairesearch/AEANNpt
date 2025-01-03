@@ -58,11 +58,11 @@ import ANNpt_data
 def main():
 	dataset = ANNpt_data.loadDataset()
 	if(stateTrainDataset):
-		model = ANNpt_algorithm.createModel(dataset['train'])	#dataset['test'] not possible as test does not contain all classes
-		processDataset(True, dataset['train'], model)
+		model = ANNpt_algorithm.createModel(dataset[datasetSplitNameTrain])	#dataset[datasetSplitNameTest] not possible as test does not contain all classes
+		processDataset(True, dataset[datasetSplitNameTrain], model)
 	if(stateTestDataset):
 		model = loadModel()
-		processDataset(False, dataset['test'], model)
+		processDataset(False, dataset[datasetSplitNameTest], model)
 
 def createOptimizer():
 	if(optimiserAdam):
@@ -103,7 +103,9 @@ def processDataset(trainOrTest, dataset, model):
 		model.to(device)
 		model.eval()
 		numberOfEpochs = 1
-	
+		totalAccuracy = 0.0
+		totalAccuracyCount = 0
+		
 	if(useAlgorithmLUOR):
 		ANNpt_algorithm.preprocessLUANNpermutations(dataset, model)
 		
@@ -144,10 +146,19 @@ def processDataset(trainOrTest, dataset, model):
 
 					if(printAccuracyRunningAverage):
 						(loss, accuracy) = (runningLoss, runningAccuracy) = (runningLoss/runningAverageBatches*(runningAverageBatches-1)+(loss/runningAverageBatches), runningAccuracy/runningAverageBatches*(runningAverageBatches-1)+(accuracy/runningAverageBatches))
-
+					
+					if(l == maxLayer-1):
+						if(not trainOrTest):
+							totalAccuracy = totalAccuracy + accuracy
+							totalAccuracyCount += 1
+					
 					loop.set_description(f'Epoch {epoch}')
 					loop.set_postfix(batchIndex=batchIndex, loss=loss, accuracy=accuracy)
-
+		
+			if(not trainOrTest):
+				averageAccuracy = totalAccuracy/totalAccuracyCount
+				print("test averageAccuracy = ", averageAccuracy)
+		
 		saveModel(model)
 					
 def trainBatch(batchIndex, batch, model, optim, l=None):
