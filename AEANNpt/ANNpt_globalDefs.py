@@ -151,17 +151,17 @@ datasetConvertClassTargetColumnFloatToInt = False	#initialise (dependent var)
 dataloaderRepeatSampler = False	#initialise (dependent var)
 dataloaderRepeatLoop = False	#initialise (dependent var)	#legacy (depreciate)
 if(useTabularDataset):
-	#datasetName = 'tabular-benchmark'	#expected test accuracy: ~58%
-	#datasetName = 'blog-feedback'	#expected test accuracy: ~64%
-	#datasetName = 'titanic'	#expected test accuracy: ~88%
-	#datasetName = 'red-wine'	#expected test accuracy: ~33%
+	#datasetName = 'tabular-benchmark'	#expected test accuracy: ~56%
+	#datasetName = 'blog-feedback'	#expected test accuracy: ~65%
+	datasetName = 'titanic'	#expected test accuracy: ~85%
+	#datasetName = 'red-wine'	#expected test accuracy: ~35%
 	#datasetName = 'breast-cancer-wisconsin'	#expected test accuracy: ~33%
-	#datasetName = 'diabetes-readmission'	#expected test accuracy: ~58%
-	#datasetName = 'banking-marketing'	#expected test accuracy: ~74%	#third party benchmark accuracy: ~79.1%
+	#datasetName = 'diabetes-readmission'	#expected test accuracy: ~60%
+	#datasetName = 'banking-marketing'	#expected test accuracy: ~75%	#third party benchmark accuracy: ~79.1%
 	#datasetName = 'adult_income_dataset'	#expected test accuracy: ~75% 	#third party benchmark accuracy: ~85.8%
-	#datasetName = 'covertype'	#expected test accuracy: ~%89 	#third party benchmark accuracy: ~97.1%
-	#datasetName = 'higgs'	#expected test accuracy: 85%	#third party benchmark accuracy: 73.8%	#https://archive.ics.uci.edu/dataset/280/higgs	#untested
-	datasetName = 'new-thyroid'	#expected test accuracy: ~50%
+	#datasetName = 'covertype'	#expected test accuracy: ~%93 	#third party benchmark accuracy: ~97.1%
+	#datasetName = 'higgs'	#expected test accuracy: ~65%	#third party benchmark accuracy: 73.8%	#https://archive.ics.uci.edu/dataset/280/higgs
+	#datasetName = 'new-thyroid'	#expected test accuracy: ~50%	https://archive.ics.uci.edu/dataset/102/thyroid+disease
 	if(datasetName == 'tabular-benchmark'):
 		datasetNameFull = 'inria-soda/tabular-benchmark'
 		classFieldName = 'class'
@@ -272,23 +272,27 @@ if(useTabularDataset):
 		classFieldName = 'cover_type'
 		datasetNormalise = True
 		learningRate = 0.001
-		numberOfLayers = 6
+		numberOfLayers = 6	#default: 6
 		hiddenLayerSize = 512
+		#numberOfLayers = 2
+		#hiddenLayerSize = 512*4
 		trainNumberOfEpochs = 10		#train performance increases with higher epochs
+		trainNumberOfEpochsHigh = True
 	elif(datasetName == 'higgs'):
-		datasetLocalFile = True		#manually download from https://archive.ics.uci.edu/dataset/280/higgs
-		#datasetNameFull = 'mstz/higgs'	#jxie/higgs
-		classFieldName = 'y'
-		trainFileName = 'HIGGS.csv'	#CHECKTHIS
-		testFileName = 'HIGGS.csv'	#CHECKTHIS
+		datasetLocalFile = True		#manually download higgs.zip:HIGGS.csv from https://archive.ics.uci.edu/dataset/280/higgs
+		#echo "class,lepton_pT,lepton_eta,lepton_phi,missing_energy_magnitude,missing_energy_phi,jet1pt,jet1eta,jet1phi,jet1b,jet2pt,jet2eta,jet2phi,jet2b,jet3pt,jet3eta,jet3phi,jet3b,jet4pt,jet4eta,jet4phi,jet4b,m_jj,m_jjj,m_lv,m_jlv,m_bb,m_wbb,m_wwbb" | cat - HIGGS.csv > HIGGSwithHeader.csv
+		classFieldName = 'class'
+		trainFileName = 'HIGGSwithHeader.csv'
+		datasetHasTestSplit = False
+		datasetConvertClassTargetColumnFloatToInt = True
 		datasetNormalise = True
 		learningRate = 0.001
-		numberOfLayers = 5
+		numberOfLayers = 4
 		hiddenLayerSize = 256	#300
 		trainNumberOfEpochs = 1		
 	elif(datasetName == 'new-thyroid'):
 		classFieldName = 'class'
-		trainFileName = 'new-thyroid.csv'
+		trainFileName = 'new-thyroid.csv'	#manually download thyroid+disease.zip:new-thyroid.data from https://archive.ics.uci.edu/dataset/102/thyroid+disease
 		datasetHasTestSplit = False
 		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		datasetLocalFile = True	

@@ -6,7 +6,7 @@ Richard Bruce Baxter - Copyright (c) 2024-2025 Baxter AI (baxterai.com)
 
 ### Description
 
-Autoencoder generated artificial neural network (AEANN) for PyTorch - experimental 
+Autoencoder/Breakaway generated artificial neural network (AEANN) for PyTorch - experimental 
 
 ### License
 

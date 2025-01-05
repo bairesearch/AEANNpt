@@ -13,7 +13,7 @@ see ANNpt_main.py
 see ANNpt_main.py
 
 # Description:
-AEANNpt Autoencoder generated artificial neural network model
+AEANNpt Autoencoder/Breakaway generated artificial neural network model
 
 """
 
