@@ -28,6 +28,12 @@ if(useImageDataset):
 	import torchvision.transforms as transforms
 import pyarrow as pa
 
+if(disableDatasetCache):
+	import datasets
+	from datasets import disable_caching
+	disable_caching()
+	datasets.config.IN_MEMORY_MAX_SIZE = 32 * 10**9	#in bytes
+
 debugSaveRawDatasetToCSV = False	#output dataset to csv file for manual checks
 debugSaveSplitDatasetToCSV = False	#output dataset to csv file for manual checks
 debugSaveNormalisedDatasetToCSV = False	#output dataset to csv file for manual checks

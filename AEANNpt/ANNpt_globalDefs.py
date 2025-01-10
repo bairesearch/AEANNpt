@@ -27,6 +27,7 @@ useAlgorithmSANIOR = False
 useAlgorithmEIANN = False
 useAlgorithmEIOR = False
 useAlgorithmAEANN = True
+useAlgorithmFFANN = False
 
 #initialise (dependent vars);
 usePairedDataset = False
@@ -74,6 +75,7 @@ trainNumberOfEpochsHigh = False
 inputLayerInList = True
 outputLayerInList = True
 useCNNlayers = False
+useCNNlayers2D = True
 thresholdActivations = False
 debugPrintActivationOutput = False
 simulatedDendriticBranches = False
@@ -117,6 +119,9 @@ elif(useAlgorithmEIOR):
 elif(useAlgorithmAEANN):
 	from AEANNpt_AEANN_globalDefs import *
 	useTabularDataset = True
+elif(useAlgorithmFFANN):
+	from AEANNpt_FFANN_globalDefs import *
+	useTabularDataset = True
 	
 import torch as pt
 
@@ -146,10 +151,12 @@ datasetSpecifyDataFiles = True	#specify data file names in dataset (else automat
 datasetHasTestSplit = True
 datasetHasSubsetType = False
 
-datasetCorrectMissingValues = False	#initialise (dependent var)
-datasetConvertClassTargetColumnFloatToInt = False	#initialise (dependent var)
-dataloaderRepeatSampler = False	#initialise (dependent var)
-dataloaderRepeatLoop = False	#initialise (dependent var)	#legacy (depreciate)
+datasetLocalFileOptimise = False
+datasetCorrectMissingValues = False	
+datasetConvertClassTargetColumnFloatToInt = False
+dataloaderRepeatSampler = False	
+dataloaderRepeatLoop = False		#legacy (depreciate)
+
 if(useTabularDataset):
 	#datasetName = 'tabular-benchmark'	#expected test accuracy: ~56%
 	#datasetName = 'blog-feedback'	#expected test accuracy: ~65%
@@ -170,8 +177,8 @@ if(useTabularDataset):
 		datasetNormalise = True
 		#datasetShuffle = True	#raw dataset is not shuffled	#not required with dataloaderShuffle 
 		learningRate = 0.001
+		hiddenLayerSize = 64	#default: 64	#orig: 10
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 10	#default: 10
 		trainNumberOfEpochs = 1	#default: 1
 	elif(datasetName == 'blog-feedback'):
 		datasetNameFull = 'wwydmanski/blog-feedback'
@@ -182,7 +189,7 @@ if(useTabularDataset):
 		datasetConvertClassTargetColumnFloatToInt = True	#int: not contiguous
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 128	#default: 128	#orig: 800
+		hiddenLayerSize = 144	#default: 144	#orig: 144	#old 800	#144=288/2 [input features padded / 2]
 		trainNumberOfEpochs = 1	#default: 1
 	elif(datasetName == 'titanic'):
 		datasetNameFull = 'victor/titanic'
@@ -194,7 +201,7 @@ if(useTabularDataset):
 		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 100	#default: 100
+		hiddenLayerSize = 128	#default: 128	#orig: 100
 		trainNumberOfEpochs = 10	#default: 10
 		datasetRepeat = True
 		if(datasetRepeat):
@@ -208,7 +215,7 @@ if(useTabularDataset):
 		datasetNormalise = True
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4	#external benchmark: 4
-		hiddenLayerSize = 100	#default: 100	#external benchmark; 64/128
+		hiddenLayerSize = 128	#default: 128	#orig: 100	#external benchmark; 64/128
 		trainNumberOfEpochs = 10	#default: 10	#note train accuracy continues to increase (overfit) with increasing epochs
 		datasetRepeat = True
 		if(datasetRepeat):
@@ -225,7 +232,7 @@ if(useTabularDataset):
 		#datasetShuffle = True	#raw dataset is not completely shuffled	#not required with dataloaderShuffle 
 		learningRate = 0.001	#default:  0.001
 		numberOfLayers = 4	#default: 4
-		hiddenLayerSize = 20	#default: 20	#old: 100
+		hiddenLayerSize = 32	#default: 32	#orig: 20	#old: 100
 		trainNumberOfEpochs = 10	#default: 10
 		datasetRepeat = True
 		if(datasetRepeat):
@@ -236,8 +243,8 @@ if(useTabularDataset):
 		datasetSpecifyDataFiles = False
 		datasetNormalise = True
 		learningRate = 0.005
-		numberOfLayers = 4
-		hiddenLayerSize = 10
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 304	#default: 304	#orig: 10, 256
 		trainNumberOfEpochs = 1
 	elif(datasetName == 'banking-marketing'):
 		datasetSpecifyDataFiles = False
@@ -247,8 +254,8 @@ if(useTabularDataset):
 		datasetConvertClassValues = True	#string: yes/no
 		datasetNormalise = True
 		learningRate = 0.001
-		numberOfLayers = 5
-		hiddenLayerSize = 128
+		numberOfLayers = 5	#default: 5
+		hiddenLayerSize = 128	#default: 128
 		trainNumberOfEpochs = 1
 	elif(datasetName == 'adult_income_dataset'):
 		datasetSpecifyDataFiles = False
@@ -259,8 +266,8 @@ if(useTabularDataset):
 		datasetConvertClassValues = True	#string: <=50K/>50K
 		datasetNormalise = True
 		learningRate = 0.001
-		numberOfLayers = 4
-		hiddenLayerSize = 256
+		numberOfLayers = 4	#default: 4
+		hiddenLayerSize = 256	#default: 256
 		trainNumberOfEpochs = 10	
 	elif(datasetName == 'covertype'):
 		datasetSpecifyDataFiles = False
@@ -273,7 +280,7 @@ if(useTabularDataset):
 		datasetNormalise = True
 		learningRate = 0.001
 		numberOfLayers = 6	#default: 6
-		hiddenLayerSize = 512
+		hiddenLayerSize = 512	#default: 512
 		#numberOfLayers = 2
 		#hiddenLayerSize = 512*4
 		trainNumberOfEpochs = 10		#train performance increases with higher epochs
@@ -288,8 +295,11 @@ if(useTabularDataset):
 		datasetNormalise = True
 		learningRate = 0.001
 		numberOfLayers = 4
-		hiddenLayerSize = 256	#300
-		trainNumberOfEpochs = 1		
+		#numberOfLayers = 2
+		hiddenLayerSize = 256	#default: 256
+		batchSize = 64		#4096	#default: 64
+		trainNumberOfEpochs = 10
+		datasetLocalFileOptimise = False	#default: False
 	elif(datasetName == 'new-thyroid'):
 		classFieldName = 'class'
 		trainFileName = 'new-thyroid.csv'	#manually download thyroid+disease.zip:new-thyroid.data from https://archive.ics.uci.edu/dataset/102/thyroid+disease
@@ -299,10 +309,8 @@ if(useTabularDataset):
 		datasetNormalise = True
 		datasetConvertClassValues = True
 		learningRate = 0.005	#default: 0.001	#orig: 0.005
-		numberOfLayers = 4	#default: 4	#orig: 2
-		hiddenLayerSize = 10	#default: 10	#orig: 4
-		#numberOfLayers = 2
-		#hiddenLayerSize = 4
+		numberOfLayers = 3	#default: 3	#orig: 2, 4
+		hiddenLayerSize = 16	#default: 16	#orig: 4, 10
 		#batchSize = 1
 		trainNumberOfEpochs = 1	#default: 1
 		datasetRepeat = True	#enable better sampling by dataloader with high batchSize (required if batchSize ~= datasetSize)
@@ -310,6 +318,13 @@ if(useTabularDataset):
 			datasetRepeatSize = 100	#for batchSize ~= 64
 	#elif ...
 
+	if(datasetLocalFileOptimise):
+		datasetShuffle = True	#default: True	#required for high dataloader initialisation efficiency with large datasets
+		dataloaderShuffle = False	#default: False	#required for high dataloader initialisation efficiency with large datasets
+		disableDatasetCache = True	#default: False #requires high CPU ram	#prevents large cache from being created on disk #only suitable with datasetLocalFile
+	else:
+		disableDatasetCache = False
+		
 	if(dataloaderRepeat):
 		dataloaderRepeatSize = 10	#number of repetitions
 		dataloaderRepeatLoop = False	#legacy (depreciate)

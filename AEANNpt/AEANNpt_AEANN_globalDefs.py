@@ -22,11 +22,26 @@ useAutoencoder = False	#optional	#condition training of hidden layers on directl
 useBreakaway = True	#optional	#condition training of hidden layers on directly connected output (stacked breakaway algorithm)
 AEANNtrainGreedy = True	#train weights for hidden layers separately (greedy training algorithm) #required for custom bio plausible approximation of multilayer backprop
 if(useAutoencoder or useBreakaway or AEANNtrainGreedy):
-	trainLocal = True	#mandatory	#use custom AEANNpt_AEANNmodel training code, do not use general ANNpt_main training code
+	trainLocal = True	#mandatory	#execute training at each layer (AEANNpt_AEANN training code), do not execute training at final layer only (ANNpt_main training code)
 else:
 	trainLocal = False	#optional	#disable for debug/benchmark against standard full layer backprop
-supportSkipLayers = False #fully connected skip layer network
+supportSkipLayers = False #optional	#fully connected skip layer network
+useCNNlayers = False	 #optional	#enforce different connection sparsity across layers to learn unique features with greedy training	#use 2D CNN instead of linear layers
 
+#CNN parameters:
+if(useCNNlayers):
+	#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
+	CNNkernelSize = 2
+	CNNstride = CNNkernelSize
+	CNNpadding = 0	#"same"
+	useCNNlayers2D = False
+	if(useCNNlayers2D):
+		CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize
+	else:
+		CNNkernelSizeTotal = CNNkernelSize
+	CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
+	debugCNN = False
+	
 #skip layer parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation
 #autoencoderPrediction = "inputLayer" 	#autoencoder (backwards connections) predicts input layer 	#orig AEORtf autoencoder_simulation2 implementation
@@ -51,12 +66,13 @@ else:
 	if(autoencoderPrediction=="allPreviousLayers" and supportSkipLayers and supportSkipLayersF):	#implied: and not supportSkipLayersB:
 		symmetricalAEsubnetIOlayers = True
 	if(symmetricalAEsubnetIOlayers):
-		#trainingUpdateImplementation = "hebbian"	#custom bio plausible approximation of single hidden layer AEANN backprop	#incomplete
+		#trainingUpdateImplementation = "hebbian"	#custom bio plausible approximation of single hidden layer autoencoder/breakaway backprop		#experimental	#incomplete
 		trainingUpdateImplementation = "backprop"
-		if(trainingUpdateImplementation == "hebbian"):
-			learningRate = 0.0001	#currently requires lower learning rate
 	else:
 		trainingUpdateImplementation = "backprop"	# single hidden layer AEANN backprop
+trainingUpdateImplementationBackpropAuto = True	#use auto gradient backprop (vs manual gradient calculations)
+if(not trainingUpdateImplementationBackpropAuto):
+	learningRate = 0.0001	#currently requires lower learning rate
 
 #activation function parameters:
 activationFunctionTypeForward = "relu"

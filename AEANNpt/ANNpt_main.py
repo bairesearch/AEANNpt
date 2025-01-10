@@ -48,7 +48,9 @@ elif(useAlgorithmEIOR):
 	import EIANNpt_EIOR as ANNpt_algorithm
 elif(useAlgorithmAEANN):
 	import AEANNpt_AEANN as ANNpt_algorithm
-		
+elif(useAlgorithmFFANN):
+	import AEANNpt_FFANN as ANNpt_algorithm
+	
 if(useSignedWeights):
 	import ANNpt_linearSublayers
 import ANNpt_data
