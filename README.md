@@ -28,3 +28,8 @@ pip install torchmetrics
 source activate pytorchsenv
 python ANNpt_main.py
 ```
+
+## Breakaway and Autoencoder generated network architectures
+
+![BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.png](https://github.com/bairesearch/AEANNpt/blob/main/dev/BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.png?raw=true)
+- [BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.pdf](https://github.com/bairesearch/AEANNpt/blob/main/dev/BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.pdf?raw=true)
