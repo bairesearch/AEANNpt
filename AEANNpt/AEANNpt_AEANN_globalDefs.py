@@ -25,22 +25,40 @@ if(useAutoencoder or useBreakaway or AEANNtrainGreedy):
 	trainLocal = True	#mandatory	#execute training at each layer (AEANNpt_AEANN training code), do not execute training at final layer only (ANNpt_main training code)
 else:
 	trainLocal = False	#optional	#disable for debug/benchmark against standard full layer backprop
-supportSkipLayers = False #optional	#fully connected skip layer network
-useCNNlayers = False	 #optional	#enforce different connection sparsity across layers to learn unique features with greedy training	#use 2D CNN instead of linear layers
+supportSkipLayers = True #optional	#fully connected skip layer network
+
+#dataset parameters:
+useImageDataset = False	#use CIFAR-10 dataset with CNN 
+if(useImageDataset):
+	useTabularDataset = False
+	useCNNlayers = True		#mandatory:True
+else:
+	useTabularDataset = True
+	useCNNlayers = False	 #default:False	#optional	#enforce different connection sparsity across layers to learn unique features with greedy training	#use 2D CNN instead of linear layers
 
 #CNN parameters:
 if(useCNNlayers):
-	#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
-	CNNkernelSize = 2
-	CNNstride = CNNkernelSize
-	CNNpadding = 0	#"same"
-	useCNNlayers2D = False
-	if(useCNNlayers2D):
-		CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize
+	if(useImageDataset):
+		#create CNN architecture, where network size converges by a factor of ~4 (or 2*2) per layer and number of channels increases by the same factor
+		CNNkernelSize = 2
+		CNNstride = 2
+		CNNpadding = 0	#"same"
+		useCNNlayers2D = True
+		CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize					
+		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
+		debugCNN = False
 	else:
-		CNNkernelSizeTotal = CNNkernelSize
-	CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
-	debugCNN = False
+		#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
+		CNNkernelSize = 2
+		CNNstride = CNNkernelSize
+		CNNpadding = 0	#"same"
+		useCNNlayers2D = False
+		if(useCNNlayers2D):
+			CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize
+		else:
+			CNNkernelSizeTotal = CNNkernelSize
+		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
+		debugCNN = False
 	
 #skip layer parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation

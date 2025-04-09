@@ -130,9 +130,13 @@ def generateLinearLayer(self, layerIndex, config, parallelStreams=False, forward
 		in_features = out_features
 		out_features = temp
 	linearSublayersNumber = config.linearSublayersNumber
-	return generateLinearLayer2(self, layerIndex, in_features, out_features, linearSublayersNumber, parallelStreams, bias=bias)
+	return generateLinearLayer2(self, layerIndex, in_features, out_features, linearSublayersNumber, parallelStreams, bias=bias, layerIndex2=layerIndex2)
 
-def generateLinearLayer2(self, layerIndex, in_features, out_features, linearSublayersNumber, parallelStreams=False, sign=True, bias=True, cnn=False):
+def generateLinearLayer2(self, layerIndex, in_features, out_features, linearSublayersNumber, parallelStreams=False, sign=True, bias=True, cnn=False, layerIndex2=None):
+	if(useImageDataset and not cnn):
+		in_features = in_features*numberInputImageChannels
+		if(layerIndex2 < self.config.numberOfLayers):
+			out_features = out_features*numberInputImageChannels
 	if(getUseLinearSublayers(self, layerIndex)):
 		linear = LinearSegregated(in_features=in_features, out_features=out_features, number_sublayers=linearSublayersNumber, bias=bias)
 	else:
@@ -198,6 +202,9 @@ def getCNNproperties(self, layerIndex):
 	inputLayerFeatures = self.config.inputLayerSize + numberInputPaddedFeatures
 	
 	if(debugCNN):
+		print("\n\n getCNNproperties:")
+		print("layerIndex = ", layerIndex)
+		print("self.config.inputLayerSize = ", self.config.inputLayerSize)
 		print("numberOfHiddenLayers = ", numberOfHiddenLayers)
 		print("self.config.inputLayerSize = ", self.config.inputLayerSize)
 		print("input_space_divisor = ", input_space_divisor)
@@ -208,6 +215,7 @@ def getCNNproperties(self, layerIndex):
 		inputLayerWidth = math.sqrt(inputLayerFeatures)
 		if not inputLayerWidth.is_integer():
 			printe("executeLinearLayer error: useCNNlayers2D requires math.sqrt(inputLayerFeatures) is integer")
+		inputLayerWidth = int(inputLayerWidth)
 	else:
 		inputLayerWidth = inputLayerFeatures
 	
@@ -244,28 +252,44 @@ def getCNNproperties(self, layerIndex):
 		if(in_width == 1):
 			in_channels = hiddenLayerSize
 		else:
-			if(hiddenLayerSize%in_width == 0):
-				in_channels = hiddenLayerSize//in_width
+			supportSubdivision = True
+			if(useCNNlayers2D):
+				if(hiddenLayerSize%(in_width**2) == 0):
+					in_channels = hiddenLayerSize//(in_width**2)
+					supportSubdivision = True
 			else:
+				if(hiddenLayerSize%in_width == 0):
+					in_channels = hiddenLayerSize//in_width
+					supportSubdivision = True
+			if not supportSubdivision:
 				#hidden layer does not support subdivision
 				in_width = 1
 				in_channels = hiddenLayerSize
 	if(out_width == 1):
 		out_channels = hiddenLayerSize
-	else:
-		if(hiddenLayerSize%out_width == 0):
-			out_channels = hiddenLayerSize//out_width
+	else:	
+		supportSubdivision = True
+		if(useCNNlayers2D):
+			if(hiddenLayerSize%(out_width**2) == 0):
+				out_channels = hiddenLayerSize//(out_width**2)
+				supportSubdivision = True
 		else:
+			if(hiddenLayerSize%out_width == 0):
+				out_channels = hiddenLayerSize//out_width
+				supportSubdivision = True
+		if not supportSubdivision:
 			#hidden layer does not support subdivision
 			out_width = 1
 			out_channels = hiddenLayerSize
+
+	in_channels = in_channels*numberInputImageChannels	#always multiply by number of input image channels
+	out_channels = out_channels*numberInputImageChannels	#always multiply by number of input image channels
 
 	out_features = hiddenLayerSize
 	in_height = in_width	#only used by useCNNlayers2D
 	out_height = out_width	#only used by useCNNlayers2D
 	
 	if(debugCNN):
-		print("\n\nlayerIndex = ", layerIndex)
 		print("out_features = ", out_features)
 		print("in_channels = ", in_channels)
 		print("out_channels = ", out_channels)
@@ -284,14 +308,19 @@ def executeLinearLayer(self, layerIndex, x, linear, parallelStreams=False, sign=
 		if(layerIndex == 0):
 			#always ensure input layer supports at least an initial subdivision (or if CNNmaxInputPadding, the number of subdivisions implied by numberOfHiddenLayers)
 			x = F.pad(x, (0, numberInputPaddedFeatures), mode='constant', value=0)	#pad along dim=1 by numberPaddedFeatures with zeros
-			
+		
 		batch_size = x.shape[0]
 		if(useCNNlayers2D):
 			x = x.reshape(batch_size, in_channels, in_height, in_width)
 		else:
 			x = x.reshape(batch_size, in_channels, in_width)
 		x = linear(x)
-		x = x.reshape(batch_size, out_features)
+
+		#model code always assumes data dimensions are flattened;
+		if useImageDataset:
+			x = x.reshape(batch_size, -1)
+		else:
+			x = x.reshape(batch_size, out_features)
 	
 	elif(getUseLinearSublayers(self, layerIndex)):
 		#perform computation for each sublayer independently
@@ -301,7 +330,6 @@ def executeLinearLayer(self, layerIndex, x, linear, parallelStreams=False, sign=
 	else:
 		if(parallelStreams):
 			x = pt.reshape(x, (x.shape[0], x.shape[1]*x.shape[2]))
-			#print("x.shape = ", x.shape)
 		x = linear(x)
 	return x
 

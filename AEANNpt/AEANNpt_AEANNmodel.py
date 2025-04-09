@@ -97,7 +97,11 @@ class AEANNmodel(nn.Module):
 						l2 = 0
 					linearB = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=False, bias=True, layerIndex2=l1)	#orig AEANNtf:bias=False
 					layersLinearListB.append(linearB)
-				B = BiasLayer(self.n_h[l1])	#need to add bias after skip layer connections have been added
+				if(l1 == config.numberOfLayers or not useImageDataset):
+					featureBaseChannels = 1
+				else:
+					featureBaseChannels = numberInputImageChannels
+				B = BiasLayer(self.n_h[l1]*featureBaseChannels)	#need to add bias after skip layer connections have been added
 				layersListB.append(B)
 			else:
 				l2 = self.getLayerIndex(l1)
@@ -114,7 +118,7 @@ class AEANNmodel(nn.Module):
 				layersLinearListB.append(linearB)
 			if(useBreakaway):
 				l2 = self.getLayerIndex(l1)
-				linearO = ANNpt_linearSublayers.generateLinearLayer2(self, l2, config.hiddenLayerSize, config.outputLayerSize, config.linearSublayersNumber, parallelStreams=False, sign=True, bias=True)
+				linearO = ANNpt_linearSublayers.generateLinearLayer2(self, l2, config.hiddenLayerSize, config.outputLayerSize, config.linearSublayersNumber, parallelStreams=False, sign=True, bias=True, layerIndex2=l1)
 				layersLinearListO.append(linearO)	
 				if(trainingUpdateImplementation == "hebbian"):
 					linearOB = ANNpt_linearSublayers.generateLinearLayer2(self, l1, config.hiddenLayerSize, config.outputLayerSize, config.linearSublayersNumber, parallelStreams=False, sign=True, bias=True)
@@ -142,9 +146,6 @@ class AEANNmodel(nn.Module):
 		
 		self.Ztrace = [None]*(config.numberOfLayers+1)
 		self.Atrace = [None]*(config.numberOfLayers+1)
-		for l1 in range(1, numberOfLayers+1):
-			self.Ztrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
-			self.Atrace[l1] = pt.zeros([batchSize, self.n_h[l1]], device=device)
 
 	def generateLayerSizeList(self):
 		n_h = [None]*(self.config.numberOfLayers+1)
@@ -164,12 +165,25 @@ class AEANNmodel(nn.Module):
 		outputPred = None
 		outputTarget = None
 
+		batch_size = x.shape[0]
+		if(useImageDataset):
+			#model code always assumes data dimensions are flattened;
+			x = x.reshape(batch_size, -1)
+
+		for l1 in range(1, numberOfLayers+1):
+			if(l1 == self.config.numberOfLayers or not useImageDataset):
+				featureBaseChannels = 1
+			else:
+				featureBaseChannels = numberInputImageChannels
+			self.Ztrace[l1] = pt.zeros([batch_size, self.n_h[l1]*featureBaseChannels], device=device)
+			self.Atrace[l1] = pt.zeros([batch_size, self.n_h[l1]*featureBaseChannels], device=device)
+
 		outputPred = x #in case layer=0
 
 		AprevLayer = x
 		self.Atrace[0] = AprevLayer
 		self.Ztrace[0] = pt.zeros_like(AprevLayer)	#set to zero as not used (just used for shape initialisation)
-
+		
 		maxLayer = self.config.numberOfLayers
 		
 		for l1 in range(1, maxLayer+1):

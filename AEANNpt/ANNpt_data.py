@@ -259,9 +259,15 @@ def countNumberClasses(dataset, printSize=False):
 	datasetSize = getDatasetSize(dataset)
 	numberOfClasses = 0
 	for i in range(datasetSize):
-		row = dataset[i]
-		
-		target = int(row[classFieldName])
+		if useImageDataset:
+			# For PyTorch datasets (e.g., CIFAR10), the label is the second element of the dataset tuple
+			_, target = dataset[i]
+		elif useTabularDataset:
+			# For Hugging Face datasets, the label is accessed via the classFieldName
+			row = dataset[i]
+			target = int(row[classFieldName])
+		else:
+			raise AttributeError("Unsupported dataset type: Unable to count classes.")
 			
 		if(target in numberOfClassSamples):
 			numberOfClassSamples[target] = numberOfClassSamples[target] + 1
@@ -278,13 +284,30 @@ def countNumberClasses(dataset, printSize=False):
 	return numberOfClasses, numberOfClassSamples
 
 def countNumberFeatures(dataset, printSize=False):
-	numberOfFeatures = len(dataset.features)-1	#-1 to ignore class targets
+	if useImageDataset:
+		# For image datasets, infer the number of features from the image shape
+		sample_image, _ = dataset[0]  # Get the first sample (image, label)
+		numberOfFeatures = sample_image.shape[1]*sample_image.shape[2]	# Total number of pixels (flattened)
+	elif useTabularDataset:
+		# For tabular datasets, use the features attribute
+		numberOfFeatures = len(dataset.features) - 1  # -1 to ignore class targets
+	else:
+		raise AttributeError("Unsupported dataset type: Unable to determine the number of features.")
+	
 	if(printSize):
 		print("numberOfFeatures = ", numberOfFeatures)
 	return numberOfFeatures
 	
 def getDatasetSize(dataset, printSize=False):
-	datasetSize = dataset.num_rows
+	if useImageDataset:
+		# Check if the dataset is a PyTorch dataset (e.g., CIFAR10)
+		datasetSize = len(dataset)
+	elif useTabularDataset:
+		# Otherwise, assume it's a Hugging Face dataset
+		datasetSize = dataset.num_rows
+	else:
+		raise AttributeError("Unsupported dataset type: Unable to determine the number of features.")
+	
 	if(printSize):
 		print("datasetSize = ", datasetSize)
 	return datasetSize

@@ -118,7 +118,7 @@ elif(useAlgorithmEIOR):
 	useImageDataset = True
 elif(useAlgorithmAEANN):
 	from AEANNpt_AEANN_globalDefs import *
-	useTabularDataset = True
+	#useTabularDataset/useImageDataset is defined by AEANNpt_AEANN_globalDefs
 elif(useAlgorithmFFANN):
 	from AEANNpt_FFANN_globalDefs import *
 	useTabularDataset = True
@@ -332,6 +332,15 @@ if(useTabularDataset):
 		if(dataloaderRepeatSampler):
 			dataloaderRepeatSamplerCustom = False	#no tqdm visualisation
 			assert not dataloaderShuffle	#dataloaderShuffle is not supported by dataloaderRepeatSampler
+elif(useImageDataset):
+	#currently assume CIFAR-10 dataset;
+	learningRate = 0.005	#0.005	#0.0001
+	batchSize = 64	 #default: 64	#debug: 2
+	numberOfLayers = 4	#default: 4	#counts hidden and output layers (not input layer)
+	hiddenLayerSize = 32*32 	#default: CIFAR-10 image size = 3*32*32=3072
+	numberInputImageChannels = 3
+	trainNumberOfEpochs = 10	#default: 10
+	disableDatasetCache = False
 	
 if(trainNumberOfEpochsHigh):
 	trainNumberOfEpochs = trainNumberOfEpochs*4
