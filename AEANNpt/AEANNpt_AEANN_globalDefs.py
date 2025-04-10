@@ -25,7 +25,7 @@ if(useAutoencoder or useBreakaway or AEANNtrainGreedy):
 	trainLocal = True	#mandatory	#execute training at each layer (AEANNpt_AEANN training code), do not execute training at final layer only (ANNpt_main training code)
 else:
 	trainLocal = False	#optional	#disable for debug/benchmark against standard full layer backprop
-supportSkipLayers = True #optional	#fully connected skip layer network
+supportSkipLayers = False #optional	#fully connected skip layer network
 
 #dataset parameters:
 useImageDataset = False	#use CIFAR-10 dataset with CNN 
@@ -40,25 +40,38 @@ else:
 if(useCNNlayers):
 	if(useImageDataset):
 		#create CNN architecture, where network size converges by a factor of ~4 (or 2*2) per layer and number of channels increases by the same factor
-		CNNkernelSize = 2
-		CNNstride = 2
-		CNNpadding = 0	#"same"
+		CNNkernelSize = 3
+		CNNstride = 1
+		CNNpadding = "same"
 		useCNNlayers2D = True
-		CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize					
+		CNNinputWidthDivisor = 2
+		CNNinputSpaceDivisor = CNNinputWidthDivisor*CNNinputWidthDivisor
 		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
+		if(CNNstride == 1):
+			CNNmaxPool2x2 = True
+			assert not supportSkipLayers, "supportSkipLayers not currently supported with CNNstride == 1 and CNNmaxPool2x2"
+		elif(CNNstride == 2):
+			CNNmaxPool2x2 = False
+			assert CNNkernelSize==2
+		else:
+			print("error: CNNstride>2 not currently supported")
 	else:
 		#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
 		CNNkernelSize = 2
 		CNNstride = CNNkernelSize
-		CNNpadding = 0	#"same"
+		CNNpadding = 0
 		useCNNlayers2D = False
+		CNNinputWidthDivisor = CNNkernelSize
 		if(useCNNlayers2D):
-			CNNkernelSizeTotal = CNNkernelSize*CNNkernelSize
+			CNNinputSpaceDivisor = CNNinputWidthDivisor*CNNinputWidthDivisor
 		else:
-			CNNkernelSizeTotal = CNNkernelSize
+			CNNinputSpaceDivisor = CNNinputWidthDivisor
 		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
+		CNNmaxPool2x2 = False
+else:
+	CNNmaxPool2x2 = False
 	
 #skip layer parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation

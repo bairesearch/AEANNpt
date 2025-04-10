@@ -64,13 +64,16 @@ class AEANNmodel(nn.Module):
 		self.n_h = self.generateLayerSizeList()
 		print("self.n_h = ", self.n_h)
 		
+		if(useCNNlayers and CNNmaxPool2x2):
+			self.maxPool = nn.MaxPool2d(kernel_size=2, stride=2)
+		
 		for l1 in range(1, config.numberOfLayers+1):	
 			if(supportSkipLayers):
 				layersLinearListF2 = []
 				layersLinearListB2 = []
 				for l2 in range(0, l1):
 					if(supportSkipLayersF):
-						if(useCNNlayers and l2==l1-1 and l1 < config.numberOfLayers):	#currently only use CNN for non-skip connections	#do not use CNN for final layer
+						if(useCNNlayers and l1<=numberOfConvlayers and l2==l1-1 and l1<config.numberOfLayers):	#currently only use CNN for non-skip connections	#do not use CNN for final layer
 							linearF2 = ANNpt_linearSublayers.generateLinearLayerCNN(self, l2, config, forward=True, bias=False, layerIndex2=l1)	#need to add bias after skip layer connections have been added
 						else:
 							linearF2 = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=True, bias=False, layerIndex2=l1)	#need to add bias after skip layer connections have been added
@@ -105,7 +108,7 @@ class AEANNmodel(nn.Module):
 				layersListB.append(B)
 			else:
 				l2 = self.getLayerIndex(l1)
-				if(useCNNlayers and l1 < config.numberOfLayers):	#do not use CNN for final layer
+				if(useCNNlayers and l1<=numberOfConvlayers and l1<config.numberOfLayers):	#do not use CNN for final layer
 					linearF = ANNpt_linearSublayers.generateLinearLayerCNN(self, l2, config, forward=True, bias=True, layerIndex2=l1)
 				else:
 					linearF = ANNpt_linearSublayers.generateLinearLayer(self, l2, config, forward=True, bias=True, layerIndex2=l1)
@@ -423,14 +426,14 @@ class AEANNmodel(nn.Module):
 			Z = pt.zeros_like(self.Ztrace[l1])
 			for l2 in range(0, l1):
 				cnn = False
-				if(useCNNlayers and l2==l1-1 and l1 < self.config.numberOfLayers):	#currently only use CNN for non-skip connections #do not use CNN for final layer
+				if(useCNNlayers and l1<=numberOfConvlayers and l2==l1-1 and l1<self.config.numberOfLayers):	#currently only use CNN for non-skip connections #do not use CNN for final layer
 					cnn = True
 				Zpartial = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), self.Atrace[l2], self.layersLinearF[l1][l2], cnn=cnn)
 				Z = pt.add(Z, Zpartial)
 			Z = pt.add(Z, self.layersB[l1](Z))	#need to add bias after skip layer connections have been added
 		else:
 			cnn = False
-			if(useCNNlayers and l1 < self.config.numberOfLayers):	#do not use CNN for final layer
+			if(useCNNlayers and l1<=numberOfConvlayers and l1<self.config.numberOfLayers):	#do not use CNN for final layer
 				cnn = True
 			Z = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l1), AprevLayer, self.layersLinearF[l1], cnn=cnn)
 		A = ANNpt_linearSublayers.executeActivationLayer(self, self.getLayerIndex(l1), Z, self.activationF)	#relU	

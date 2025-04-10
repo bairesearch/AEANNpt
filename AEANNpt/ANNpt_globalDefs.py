@@ -337,7 +337,8 @@ elif(useImageDataset):
 	learningRate = 0.005	#0.005	#0.0001
 	batchSize = 64	 #default: 64	#debug: 2
 	numberOfLayers = 4	#default: 4	#counts hidden and output layers (not input layer)
-	hiddenLayerSize = 32*32 	#default: CIFAR-10 image size = 3*32*32=3072
+	numberOfConvlayers = 2	#rest will be linear
+	hiddenLayerSize = 4*32*32 	#default: CIFAR-10 image size = 3*32*32=3072
 	numberInputImageChannels = 3
 	trainNumberOfEpochs = 10	#default: 10
 	disableDatasetCache = False
