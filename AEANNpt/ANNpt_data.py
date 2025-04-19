@@ -162,7 +162,7 @@ def normaliseDataset(dataset):
 			dataset = dataset.remove_columns(featureName)
 			dataset = dataset.add_column(featureName, featureDataList)
 	return dataset
-	
+
 def repeatDataset(dataset):
 	datasetSize = getDatasetSize(dataset)
 	repeatIndices = list(range(datasetSize))
@@ -444,14 +444,45 @@ class CustomRandomSampler(pt.utils.data.Sampler):
 			sampleIndex += 1
 
 def loadDatasetImage():
-	# Load the CIFAR-10 dataset and define preprocessing transformations
-	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+	# Load the CIFAR-10 dataset with optional augmentation
+	if imageDatasetAugment:
+		train_transform = transforms.Compose([
+			transforms.RandomCrop(32, padding=4),
+			transforms.RandomHorizontalFlip(),
+			transforms.ToTensor(),
+			transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5)),
+			transforms.Lambda(lambda img: cutout(img))
+		])
+	else:
+		train_transform = transforms.Compose([
+			transforms.ToTensor(),
+			transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+		])
+	test_transform = transforms.Compose([
+		transforms.ToTensor(),
+		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+	])
 	dataset = {}
-	dataset[datasetSplitNameTrain] = torchvision.datasets.CIFAR10(root=dataPathName, train=True, download=True, transform=transform)
-	dataset[datasetSplitNameTest] = torchvision.datasets.CIFAR10(root=dataPathName, train=False, download=True, transform=transform)
+	dataset[datasetSplitNameTrain] = torchvision.datasets.CIFAR10(root=dataPathName, train=True, download=True, transform=train_transform)
+	dataset[datasetSplitNameTest] = torchvision.datasets.CIFAR10(root=dataPathName, train=False, download=True, transform=test_transform)
 	return dataset
 
 def createDataLoaderImage(dataset):
 	loader = pt.utils.data.DataLoader(dataset, batch_size=batchSize, shuffle=True)
 	return loader
-	
+
+def cutout(img, n_holes=1, length=16):
+	"""Apply cutout augmentation to a tensor image."""
+	h, w = img.size(1), img.size(2)
+	mask = np.ones((h, w), np.float32)
+	for _ in range(n_holes):
+		y = random.randrange(h)
+		x = random.randrange(w)
+		y1 = max(0, y - length//2)
+		y2 = min(h, y + length//2)
+		x1 = max(0, x - length//2)
+		x2 = min(w, x + length//2)
+		mask[y1:y2, x1:x2] = 0.
+	mask = pt.from_numpy(mask)
+	mask = mask.expand_as(img)
+	return img * mask

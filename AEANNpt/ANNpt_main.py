@@ -14,19 +14,23 @@ pip install datasets
 pip install torch
 pip install lovely-tensors
 pip install torchmetrics
+pip install torchvision
+pip install torchsummary
 
 # Usage:
 source activate pytorchsenv
 python ANNpt_main.py
 
 # Description:
-ANNpt main - custom artificial neural network trained on tabular data
+ANNpt main - custom artificial neural network trained on tabular/image data
 
 """
 
 import torch
 from tqdm.auto import tqdm
 from torch import optim
+from torch.optim.lr_scheduler import StepLR
+
 
 from ANNpt_globalDefs import *
 
@@ -90,6 +94,13 @@ def createOptimiser(model):
 		optim = torch.optim.Adam(model.parameters(), lr=learningRate)
 	return optim
 
+def createScheduler(model, optim):
+	if(trainLocal):
+		schedulers = [StepLR(opt, step_size=10, gamma=0.5) for opt in optim]
+	else:
+		schedulers = [StepLR(optim, step_size=10, gamma=0.5)]
+	return schedulers
+
 def processDataset(trainOrTest, dataset, model):
 	if(trainOrTest):
 		if(useAlgorithmEIANN and trainLocal):
@@ -98,6 +109,8 @@ def processDataset(trainOrTest, dataset, model):
 			optim += [createOptimiser(model)]
 		else:
 			optim = createOptimiser(model)
+		if(useLearningRateScheduler):
+			schedulers = createScheduler(model, optim)
 		model.to(device)
 		model.train()	
 		numberOfEpochs = trainNumberOfEpochs
@@ -112,6 +125,7 @@ def processDataset(trainOrTest, dataset, model):
 		ANNpt_algorithm.preprocessLUANNpermutations(dataset, model)
 		
 	for epoch in range(numberOfEpochs):
+
 		if(usePairedDataset):
 			dataset1, dataset2 = ANNpt_algorithm.generateVICRegANNpairedDatasets(dataset)
 		
@@ -160,6 +174,11 @@ def processDataset(trainOrTest, dataset, model):
 			if(not trainOrTest):
 				averageAccuracy = totalAccuracy/totalAccuracyCount
 				print("test averageAccuracy = ", averageAccuracy)
+
+		if(trainOrTest):
+			if(useLearningRateScheduler):
+				for sch in schedulers:
+					sch.step()
 		
 		saveModel(model)
 					
@@ -194,7 +213,7 @@ def saveModel(model):
 
 def loadModel():
 	print("loading existing model")
-	model = torch.load(modelPathNameFull)
+	model = torch.load(modelPathNameFull, weights_only=False)
 	return model
 		
 def propagate(trainOrTest, batchIndex, batch, model, optim=None, l=None):

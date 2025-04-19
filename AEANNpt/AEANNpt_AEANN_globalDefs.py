@@ -28,7 +28,7 @@ else:
 supportSkipLayers = False #optional	#fully connected skip layer network
 
 #dataset parameters:
-useImageDataset = False	#use CIFAR-10 dataset with CNN 
+useImageDataset = True	#use CIFAR-10 dataset with CNN 
 if(useImageDataset):
 	useTabularDataset = False
 	useCNNlayers = True		#mandatory:True
@@ -46,16 +46,19 @@ if(useCNNlayers):
 		useCNNlayers2D = True
 		CNNinputWidthDivisor = 2
 		CNNinputSpaceDivisor = CNNinputWidthDivisor*CNNinputWidthDivisor
-		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
+		CNNmaxInputPadding = False	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
 		if(CNNstride == 1):
-			CNNmaxPool2x2 = True
-			assert not supportSkipLayers, "supportSkipLayers not currently supported with CNNstride == 1 and CNNmaxPool2x2"
+			CNNmaxPool = True
+			assert not supportSkipLayers, "supportSkipLayers not currently supported with CNNstride == 1 and CNNmaxPool"
 		elif(CNNstride == 2):
-			CNNmaxPool2x2 = False
+			CNNmaxPool = False
 			assert CNNkernelSize==2
 		else:
 			print("error: CNNstride>2 not currently supported")
+		CNNbatchNorm = True
+		CNNbatchNormFC = False	#optional	#batch norm for fully connected layers
+		CNNdropout = False
 	else:
 		#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
 		CNNkernelSize = 2
@@ -69,9 +72,15 @@ if(useCNNlayers):
 			CNNinputSpaceDivisor = CNNinputWidthDivisor
 		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
-		CNNmaxPool2x2 = False
+		CNNmaxPool = False
+		CNNbatchNorm = False
+		CNNbatchNormFC = False
+		CNNdropout = False
 else:
-	CNNmaxPool2x2 = False
+	CNNmaxPool = False
+	CNNbatchNorm = False
+	CNNbatchNormFC = False
+	CNNdropout = False
 	
 #skip layer parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation

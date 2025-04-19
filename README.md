@@ -21,6 +21,8 @@ pip install datasets
 pip install torch
 pip install lovely-tensors
 pip install torchmetrics
+pip install torchvision
+pip install torchsummary
 ```
 
 ### Execution

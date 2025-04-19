@@ -332,17 +332,33 @@ if(useTabularDataset):
 		if(dataloaderRepeatSampler):
 			dataloaderRepeatSamplerCustom = False	#no tqdm visualisation
 			assert not dataloaderShuffle	#dataloaderShuffle is not supported by dataloaderRepeatSampler
+	numberOfConvlayers = None
+	CNNhiddenLayerSize = None
+	useLearningRateScheduler = False
 elif(useImageDataset):
 	#currently assume CIFAR-10 dataset;
 	learningRate = 0.005	#0.005	#0.0001
 	batchSize = 64	 #default: 64	#debug: 2
-	numberOfLayers = 4	#default: 4	#counts hidden and output layers (not input layer)
-	numberOfConvlayers = 2	#rest will be linear
-	hiddenLayerSize = 4*32*32 	#default: CIFAR-10 image size = 3*32*32=3072
+	numberOfConvlayers = 6	#rest will be linear	#orig: 2	#default: 2, 4, 6
+	numberOfLayers = numberOfConvlayers+3	#counts hidden and output layers (not input layer)
+	#numberOfLayers = 2
+	#numberOfConvlayers = 0
 	numberInputImageChannels = 3
-	trainNumberOfEpochs = 10	#default: 10
+	CNNhiddenLayerSize = 3*32*32 * 4	#default: CIFAR-10 image size = 3*32*32=3072
+	if(numberOfConvlayers >= 4):
+		CNNconvergeEveryEvenLayer = True	#default: True for numberOfConvlayers 4 or 6	#orig: False
+		assert numberOfConvlayers%2 == 0
+	else:
+		CNNconvergeEveryEvenLayer = False
+	hiddenLayerSize = 1024
 	disableDatasetCache = False
-	
+	imageDatasetAugment = True
+	if(imageDatasetAugment):
+		trainNumberOfEpochs = 100	#default: 100
+	else:
+		trainNumberOfEpochs = 10	#default: 10
+	useLearningRateScheduler = True
+
 if(trainNumberOfEpochsHigh):
 	trainNumberOfEpochs = trainNumberOfEpochs*4
 	
