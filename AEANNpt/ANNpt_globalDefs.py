@@ -63,11 +63,20 @@ else:
 	
 
 #default network hierarchy parameters (overwritten by specific dataset defaults): 
+warmupEpochs = 0	#default: 0
 learningRate = 0.005	#0.005	#0.0001
+momentum = 0.0     #default: 0.0
+weightDecay  = 0.0 #default: 0.0
 batchSize = 64	 #default: 64	#debug: 2
 numberOfLayers = 4	#default: 4	#counts hidden and output layers (not input layer)
 hiddenLayerSize = 10	#default: 10
 trainNumberOfEpochs = 10	#default: 10
+numberOfConvlayers = None
+CNNhiddenLayerSize = None
+useLearningRateScheduler = False
+batchNormFC = False	#optional	#batch norm for fully connected layers
+dropout = False
+dropoutProb = 0.5 	#default: 0.5	#orig: 0.3
 
 #initialise (dependent vars);
 debugSmallNetwork = False
@@ -332,13 +341,13 @@ if(useTabularDataset):
 		if(dataloaderRepeatSampler):
 			dataloaderRepeatSamplerCustom = False	#no tqdm visualisation
 			assert not dataloaderShuffle	#dataloaderShuffle is not supported by dataloaderRepeatSampler
-	numberOfConvlayers = None
-	CNNhiddenLayerSize = None
-	useLearningRateScheduler = False
 elif(useImageDataset):
 	#currently assume CIFAR-10 dataset;
-	learningRate = 0.005	#0.005	#0.0001
-	batchSize = 64	 #default: 64	#debug: 2
+	warmupEpochs = 5 	#default: 5	#orig: 0
+	learningRate = 0.001	#default: 0.001	#orig: 0.005
+	momentum = 0.9     #default: 0.9	#orig: 0.0
+	weightDecay  = 5e-4    #default: 5e-4	#orig: 0.0
+	batchSize = 128	 #default: 128	#orig: 64
 	numberOfConvlayers = 6	#rest will be linear	#orig: 2	#default: 2, 4, 6
 	numberOfLayers = numberOfConvlayers+3	#counts hidden and output layers (not input layer)
 	#numberOfLayers = 2
@@ -358,6 +367,11 @@ elif(useImageDataset):
 	else:
 		trainNumberOfEpochs = 10	#default: 10
 	useLearningRateScheduler = True
+	learningRateSchedulerStepsize = 10	#default: 30	#orig: 10	
+	learningRateSchedulerGamma = 0.5	#default: 0.1	#orig: 0.5
+	batchNormFC = False	#optional	#batch norm for fully connected layers
+	dropout = False
+	dropoutProb = 0.5 	#default: 0.5	#orig: 0.3
 
 if(trainNumberOfEpochsHigh):
 	trainNumberOfEpochs = trainNumberOfEpochs*4

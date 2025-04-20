@@ -57,8 +57,6 @@ if(useCNNlayers):
 		else:
 			print("error: CNNstride>2 not currently supported")
 		CNNbatchNorm = True
-		CNNbatchNormFC = False	#optional	#batch norm for fully connected layers
-		CNNdropout = False
 	else:
 		#create CNN architecture, where network size converges by a factor of ~2 (or 2*2 if useCNNlayers2D) per layer and number of channels increases by the same factor
 		CNNkernelSize = 2
@@ -74,13 +72,9 @@ if(useCNNlayers):
 		debugCNN = False
 		CNNmaxPool = False
 		CNNbatchNorm = False
-		CNNbatchNormFC = False
-		CNNdropout = False
 else:
 	CNNmaxPool = False
 	CNNbatchNorm = False
-	CNNbatchNormFC = False
-	CNNdropout = False
 	
 #skip layer parameters:
 autoencoderPrediction = "previousLayer"	#autoencoder (backwards connections) predicts previous layer	#orig AEANNtf/AEANNpt implementation

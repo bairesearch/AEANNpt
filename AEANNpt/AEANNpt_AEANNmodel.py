@@ -80,7 +80,7 @@ class AEANNmodel(nn.Module):
 				for layerIndex in range(config.numberOfConvlayers):
 					_, in_channels, out_channels, _, _, _, _, _ = ANNpt_linearSublayers.getCNNproperties(self, layerIndex)
 					self.batchNorm.append(nn.BatchNorm2d(out_channels))
-			if CNNbatchNormFC:
+			if batchNormFC:
 				self.batchNormFC = nn.ModuleList()
 				for layerIndex in range(numberOfConvlayers, config.numberOfLayers):
 					# determine number of features out of that FC
@@ -89,10 +89,10 @@ class AEANNmodel(nn.Module):
 					else:
 						feat = config.hiddenLayerSize
 					self.batchNormFC.append(nn.BatchNorm1d(feat))
-			if(CNNdropout):
+			if(dropout):
 				self.dropout = nn.ModuleList()
 				for _ in range(config.numberOfLayers):
-					self.dropout.append(nn.Dropout2d(p=0.3))  # or nn.Dropout(p=0.5)
+					self.dropout.append(nn.Dropout2d(p=dropoutProb))
 			if(CNNmaxPool):
 				self.maxPool = nn.MaxPool2d(kernel_size=2, stride=2)
 

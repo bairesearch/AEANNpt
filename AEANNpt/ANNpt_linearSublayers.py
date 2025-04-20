@@ -472,13 +472,13 @@ def executeBatchNormLayer(self, layerIndex, x, batchNorm, batchNormFC):
 			if(CNNbatchNorm):
 				x = self.batchNorm[layerIndex](x)
 		else:
-			if(CNNbatchNormFC):
+			if(batchNormFC):
 				idx = layerIndex - numberOfConvlayers
 				x = self.batchNormFC[idx](x)
 	return x
 
 def executeDropoutLayer(self, layerIndex, x, batchNorm):
-	if(CNNdropout):
+	if(dropout):
 		x = self.dropout[layerIndex](x)
 	return x
 

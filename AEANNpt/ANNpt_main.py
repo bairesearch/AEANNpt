@@ -29,7 +29,8 @@ ANNpt main - custom artificial neural network trained on tabular/image data
 import torch
 from tqdm.auto import tqdm
 from torch import optim
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, LambdaLR, SequentialLR
+
 
 
 from ANNpt_globalDefs import *
@@ -72,9 +73,9 @@ def main():
 
 def createOptimizer():
 	if(optimiserAdam):
-		optim = torch.optim.Adam(model.parameters(), lr=learningRate)
+		optim = torch.optim.Adam(model.parameters(), lr=learningRate, weight_decay=weightDecay)
 	else:
-		optim = torch.optim.SGD(model.parameters(), lr=learningRate)
+		optim = torch.optim.SGD(model.parameters(), lr=learningRate, momentum=momentum, weight_decay=weightDecay)
 	return optim
 
 def createOptimiser(model):
@@ -95,11 +96,20 @@ def createOptimiser(model):
 	return optim
 
 def createScheduler(model, optim):
-	if(trainLocal):
-		schedulers = [StepLR(opt, step_size=10, gamma=0.5) for opt in optim]
+	def make_scheduler(opt):
+		if warmupEpochs > 0:
+			# 1) warm‑up λ(epoch): epoch/warmupEpochs clipped at 1.0
+			warm = LambdaLR(opt, lr_lambda=lambda e: min(1.0, float(e + 1) / warmupEpochs))
+			# 2) then step down by gamma every Stepsize
+			step = StepLR(opt, step_size=learningRateSchedulerStepsize, gamma=learningRateSchedulerGamma)
+			return SequentialLR(opt, schedulers=[warm, step], milestones=[warmupEpochs])
+		else:
+			return StepLR(opt, step_size=learningRateSchedulerStepsize, gamma=learningRateSchedulerGamma)
+
+	if trainLocal:
+		return [make_scheduler(o) for o in optim]
 	else:
-		schedulers = [StepLR(optim, step_size=10, gamma=0.5)]
-	return schedulers
+		return [make_scheduler(optim)]
 
 def processDataset(trainOrTest, dataset, model):
 	if(trainOrTest):
