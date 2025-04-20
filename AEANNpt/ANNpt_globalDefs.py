@@ -94,7 +94,9 @@ normaliseActivationSparsity = False
 debugUsePositiveWeightsVerify = False
 datasetNormaliseMinMax = True	#normalise between 0.0 and 1.0
 datasetNormaliseStdAvg = False	#normalise based on std and mean (~-1.0 to 1.0)
-		
+supportSkipLayers = False
+supportSkipLayersResidual = False
+
 useInbuiltCrossEntropyLossFunction = True	#required
 if(useSignedWeights):
 	usePositiveWeightsClampModel = True	#clamp entire model weights to be positive (rather than per layer); currently required

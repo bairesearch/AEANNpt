@@ -134,7 +134,9 @@ def generateLinearLayer(self, layerIndex1, config, parallelStreams=False, forwar
 
 def generateLinearLayer2(self, layerIndex1, in_features, out_features, linearSublayersNumber, parallelStreams=False, sign=True, bias=True, cnn=False, layerIndex2=None):
 	if(useImageDataset and not cnn):
-		if(layerIndex1 <= numberOfConvlayers):
+		if(layerIndex1 == 0):
+			pass
+		elif(layerIndex1 <= numberOfConvlayers):
 			in_features = CNNhiddenLayerSize
 		if(layerIndex2 <= numberOfConvlayers):
 			out_features = CNNhiddenLayerSize
@@ -190,20 +192,24 @@ def generateActivationFunction(activationFunctionType, positive=True):
 def getCNNproperties(self, layerIndex):
 
 	numberOfHiddenLayers = self.config.numberOfLayers-1
-	
-	#pad input layer to support CNN layers;
-	if(CNNmaxInputPadding):	#pad input layer to support max number of CNN layers
-		input_space_divisor = CNNinputSpaceDivisor**numberOfConvlayers
-	else:	#pad input layer to support min number of CNN layers
-		input_space_divisor = CNNinputSpaceDivisor
 	hiddenLayerSize = self.config.CNNhiddenLayerSize
-	remainder = self.config.inputLayerSize % input_space_divisor
-	if(remainder == 0):
-		numberInputPaddedFeatures = 0
+
+	if(CNNinputPadding):
+		#pad input layer to support CNN layers;
+		if(CNNmaxInputPadding):	#pad input layer to support max number of CNN layers
+			input_space_divisor = CNNinputSpaceDivisor**numberOfConvlayers
+		else:	#pad input layer to support min number of CNN layers
+			input_space_divisor = CNNinputSpaceDivisor
+		remainder = self.config.inputLayerSize % input_space_divisor
+		if(remainder == 0):
+			numberInputPaddedFeatures = 0
+		else:
+			numberInputPaddedFeatures = (input_space_divisor-remainder)
+			printe("getCNNproperties warning: numberInputPaddedFeatures != 0")
+		inputLayerFeatures = self.config.inputLayerSize//numberInputImageChannels + numberInputPaddedFeatures
 	else:
-		numberInputPaddedFeatures = (input_space_divisor-remainder)
-		printe("getCNNproperties warning: numberInputPaddedFeatures != 0")
-	inputLayerFeatures = self.config.inputLayerSize + numberInputPaddedFeatures
+		numberInputPaddedFeatures = 0
+		inputLayerFeatures = self.config.inputLayerSize//numberInputImageChannels
 	
 	if(debugCNN):
 		print("\n\n getCNNproperties:")
@@ -461,6 +467,13 @@ class OffsetSoftmax(nn.Module):
 		x = pt.max(pt.zeros_like(x), x - self.offset)
 		return x
 
+def executeResidual(self, l1, l2, Z, AprevLayer):
+	if(supportSkipLayersResidual):
+		# only do a residual add if shapes already match
+		if AprevLayer.shape == Z.shape:
+			Z = Z + AprevLayer
+	return Z
+
 def executeBatchNormLayer(self, layerIndex, x, batchNorm, batchNormFC):
 	if(useCNNlayers):
 		assert not getUseLinearSublayers(self, layerIndex)
@@ -469,6 +482,18 @@ def executeBatchNormLayer(self, layerIndex, x, batchNorm, batchNormFC):
 				x = convReshapeIntermediateMaxPool(self, x, layerIndex)
 			elif(CNNbatchNorm):
 				x = convReshapeIntermediate(self, x, layerIndex)
+			if(CNNbatchNorm):
+				x = self.batchNorm[layerIndex](x)
+		else:
+			if(batchNormFC):
+				idx = layerIndex - numberOfConvlayers
+				x = self.batchNormFC[idx](x)
+	return x
+
+def executeBatchNormLayer(self, layerIndex, x, batchNorm, batchNormFC):
+	if(useCNNlayers):
+		assert not getUseLinearSublayers(self, layerIndex)
+		if(layerIndex < numberOfConvlayers):
 			if(CNNbatchNorm):
 				x = self.batchNorm[layerIndex](x)
 		else:
@@ -489,13 +514,21 @@ def executeMaxPoolLayer(self, layerIndex, x, maxPool):
 			if(CNNmaxPool):
 				if(not (CNNconvergeEveryEvenLayer and layerIndex%2 == 0)):
 					x = self.maxPool(x)
-			if(CNNbatchNorm or CNNmaxPool):
-				x = convReshapeOut(self, x, layerIndex)
+	return x
+
+def convReshapeIntermediate(self, layerIndex, x, supportMaxPool=True):
+	if(useCNNlayers):
+		assert not getUseLinearSublayers(self, layerIndex)
+		if(layerIndex < numberOfConvlayers):
+			if(CNNmaxPool and supportMaxPool):
+				x = convReshapeIntermediateMaxPool(self, x, layerIndex)
+			else:
+				x = convReshapeIntermediateNoMaxPool(self, x, layerIndex)
 	return x
 
 def convReshapeIntermediateMaxPool(self, x, layerIndex):
 	if(CNNconvergeEveryEvenLayer and layerIndex%2 == 0):
-		return convReshapeIntermediate(self, x, layerIndex)
+		return convReshapeIntermediateNoMaxPool(self, x, layerIndex)
 	else:
 		out_features, in_channels, out_channels, in_width, in_height, out_width, out_height, numberInputPaddedFeatures = getCNNproperties(self, layerIndex)
 		batch_size = x.shape[0]
@@ -505,7 +538,7 @@ def convReshapeIntermediateMaxPool(self, x, layerIndex):
 			x = x.reshape(batch_size, out_channels, out_width*CNNinputWidthDivisor)
 	return x
 	
-def convReshapeIntermediate(self, x, layerIndex):
+def convReshapeIntermediateNoMaxPool(self, x, layerIndex):
 	out_features, in_channels, out_channels, in_width, in_height, out_width, out_height, numberInputPaddedFeatures = getCNNproperties(self, layerIndex)
 	batch_size = x.shape[0]
 	if(useCNNlayers2D):
@@ -522,7 +555,14 @@ def convReshapeIn(self, x, layerIndex):
 	else:
 		x = x.reshape(batch_size, in_channels, in_width)
 	return x
-	
+
+def convReshapeFinal(self, layerIndex, x):
+	if(useCNNlayers):
+		assert not getUseLinearSublayers(self, layerIndex)
+		if(layerIndex < numberOfConvlayers):
+			x = convReshapeOut(self, x, layerIndex)
+	return x
+
 def convReshapeOut(self, x, layerIndex):
 	out_features, in_channels, out_channels, in_width, in_height, out_width, out_height, numberInputPaddedFeatures = getCNNproperties(self, layerIndex)
 	batch_size = x.shape[0]
@@ -532,3 +572,4 @@ def convReshapeOut(self, x, layerIndex):
 	else:
 		x = x.reshape(batch_size, out_features)
 	return x
+

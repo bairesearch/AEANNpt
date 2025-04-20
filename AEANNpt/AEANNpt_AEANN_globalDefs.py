@@ -26,6 +26,7 @@ if(useAutoencoder or useBreakaway or AEANNtrainGreedy):
 else:
 	trainLocal = False	#optional	#disable for debug/benchmark against standard full layer backprop
 supportSkipLayers = False #optional	#fully connected skip layer network
+supportSkipLayersResidual = False	#optional	#direct residual connections
 
 #dataset parameters:
 useImageDataset = True	#use CIFAR-10 dataset with CNN 
@@ -46,11 +47,12 @@ if(useCNNlayers):
 		useCNNlayers2D = True
 		CNNinputWidthDivisor = 2
 		CNNinputSpaceDivisor = CNNinputWidthDivisor*CNNinputWidthDivisor
+		CNNinputPadding = False
 		CNNmaxInputPadding = False	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
 		if(CNNstride == 1):
 			CNNmaxPool = True
-			assert not supportSkipLayers, "supportSkipLayers not currently supported with CNNstride == 1 and CNNmaxPool"
+			#assert not supportSkipLayers, "supportSkipLayers not currently supported with CNNstride == 1 and CNNmaxPool"
 		elif(CNNstride == 2):
 			CNNmaxPool = False
 			assert CNNkernelSize==2
@@ -68,6 +70,7 @@ if(useCNNlayers):
 			CNNinputSpaceDivisor = CNNinputWidthDivisor*CNNinputWidthDivisor
 		else:
 			CNNinputSpaceDivisor = CNNinputWidthDivisor
+		CNNinputPadding = True
 		CNNmaxInputPadding = True	#pad input with zeros such that CNN is applied to every layer
 		debugCNN = False
 		CNNmaxPool = False

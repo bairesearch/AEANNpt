@@ -287,7 +287,7 @@ def countNumberFeatures(dataset, printSize=False):
 	if useImageDataset:
 		# For image datasets, infer the number of features from the image shape
 		sample_image, _ = dataset[0]  # Get the first sample (image, label)
-		numberOfFeatures = sample_image.shape[1]*sample_image.shape[2]	# Total number of pixels (flattened)
+		numberOfFeatures = sample_image.shape[0]*sample_image.shape[1]*sample_image.shape[2]
 	elif useTabularDataset:
 		# For tabular datasets, use the features attribute
 		numberOfFeatures = len(dataset.features) - 1  # -1 to ignore class targets

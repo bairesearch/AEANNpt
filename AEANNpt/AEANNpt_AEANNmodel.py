@@ -130,11 +130,7 @@ class AEANNmodel(nn.Module):
 						l1 = 0
 					linearB = ANNpt_linearSublayers.generateLinearLayer(self, l1, config, forward=False, bias=True, layerIndex2=l2)	#orig AEANNtf:bias=False
 					layersLinearListB.append(linearB)
-				if(l2 == config.numberOfLayers or not useImageDataset):
-					featureBaseChannels = 1
-				else:
-					featureBaseChannels = numberInputImageChannels
-				B = BiasLayer(self.n_h[l2]*featureBaseChannels)	#need to add bias after skip layer connections have been added
+				B = BiasLayer(self.n_h[l2])	#need to add bias after skip layer connections have been added
 				layersListB.append(B)
 			else:
 				l1 = self.getLayerIndex(l2)
@@ -208,12 +204,8 @@ class AEANNmodel(nn.Module):
 			x = x.reshape(batch_size, -1)
 
 		for l2 in range(1, numberOfLayers+1):
-			if(l2 == self.config.numberOfLayers or not useImageDataset):
-				featureBaseChannels = 1
-			else:
-				featureBaseChannels = numberInputImageChannels
-			self.Ztrace[l2] = pt.zeros([batch_size, self.n_h[l2]*featureBaseChannels], device=device)
-			self.Atrace[l2] = pt.zeros([batch_size, self.n_h[l2]*featureBaseChannels], device=device)
+			self.Ztrace[l2] = pt.zeros([batch_size, self.n_h[l2]], device=device)
+			self.Atrace[l2] = pt.zeros([batch_size, self.n_h[l2]], device=device)
 
 		outputPred = x #in case layer=0
 
@@ -451,7 +443,6 @@ class AEANNmodel(nn.Module):
 					inputTargetListPartial = self.Atrace[l1]
 					inputTargetList.append(inputTargetListPartial)
 				inputTarget = pt.concat(inputTargetList, dim=1)
-				#print("inputTarget.shape = ", inputTarget.shape)
 			elif(autoencoderPrediction=="previousLayer"):
 				inputTarget = AprevLayer
 			elif(autoencoderPrediction=="inputLayer"):
@@ -464,17 +455,28 @@ class AEANNmodel(nn.Module):
 				if(useCNNlayers and l2<=numberOfConvlayers and l1==l2-1 and l2<self.config.numberOfLayers):	#currently only use CNN for non-skip connections #do not use CNN for final layer
 					cnn = True
 				Zpartial = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l2), self.Atrace[l1], self.layersLinearF[l2][l1], cnn=cnn)
+				if(l1 == self.getLayerIndex(l2)):	#is cnn layer
+					Zpartial = ANNpt_linearSublayers.convReshapeIntermediate(self, self.getLayerIndex(l2), Zpartial)
+					Zpartial = ANNpt_linearSublayers.executeMaxPoolLayer(self, self.getLayerIndex(l2), Zpartial, self.maxPool)	#maxPool
+					Zpartial = ANNpt_linearSublayers.convReshapeFinal(self, self.getLayerIndex(l2), Zpartial)
 				Z = pt.add(Z, Zpartial)
 			Z = pt.add(Z, self.layersB[l2](Z))	#need to add bias after skip layer connections have been added
+			maxPoolAfterActivation = False	#maxPool operation already applied
 		else:
 			cnn = False
 			if(useCNNlayers and l2<=numberOfConvlayers and l2<self.config.numberOfLayers):	#do not use CNN for final layer
 				cnn = True
 			Z = ANNpt_linearSublayers.executeLinearLayer(self, self.getLayerIndex(l2), AprevLayer, self.layersLinearF[l2], cnn=cnn)
+			maxPoolAfterActivation = True
+
+		Z = ANNpt_linearSublayers.executeResidual(self, self.getLayerIndex(l2), l2, Z, AprevLayer)	#residual
+		Z = ANNpt_linearSublayers.convReshapeIntermediate(self, self.getLayerIndex(l2), Z, supportMaxPool=maxPoolAfterActivation)
 		Z = ANNpt_linearSublayers.executeBatchNormLayer(self, self.getLayerIndex(l2), Z, self.batchNorm, self.batchNormFC)	#batchNorm
 		A = ANNpt_linearSublayers.executeActivationLayer(self, self.getLayerIndex(l2), Z, self.activationF)	#relU
 		A = ANNpt_linearSublayers.executeDropoutLayer(self, self.getLayerIndex(l2), A, self.dropout)	#dropout
-		A = ANNpt_linearSublayers.executeMaxPoolLayer(self, self.getLayerIndex(l2), A, self.maxPool)	#maxPool
+		if(maxPoolAfterActivation):
+			A = ANNpt_linearSublayers.executeMaxPoolLayer(self, self.getLayerIndex(l2), A, self.maxPool)	#maxPool
+		A = ANNpt_linearSublayers.convReshapeFinal(self, self.getLayerIndex(l2), A)
 
 		return A, Z, inputTarget
 
