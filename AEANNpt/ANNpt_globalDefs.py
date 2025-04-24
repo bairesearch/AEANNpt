@@ -295,7 +295,7 @@ if(useTabularDataset):
 		#numberOfLayers = 2
 		#hiddenLayerSize = 512*4
 		trainNumberOfEpochs = 10		#train performance increases with higher epochs
-		trainNumberOfEpochsHigh = True
+		trainNumberOfEpochsHigh = False	#orig: True
 	elif(datasetName == 'higgs'):
 		datasetLocalFile = True		#manually download higgs.zip:HIGGS.csv from https://archive.ics.uci.edu/dataset/280/higgs
 		#echo "class,lepton_pT,lepton_eta,lepton_phi,missing_energy_magnitude,missing_energy_phi,jet1pt,jet1eta,jet1phi,jet1b,jet2pt,jet2eta,jet2phi,jet2b,jet3pt,jet3eta,jet3phi,jet3b,jet4pt,jet4eta,jet4phi,jet4b,m_jj,m_jjj,m_lv,m_jlv,m_bb,m_wbb,m_wwbb" | cat - HIGGS.csv > HIGGSwithHeader.csv
@@ -346,7 +346,7 @@ if(useTabularDataset):
 elif(useImageDataset):
 	#currently assume CIFAR-10 dataset;
 	warmupEpochs = 5 	#default: 5	#orig: 0
-	learningRate = 0.001	#default: 0.001	#orig: 0.005
+	learningRate = 0.001	#default: 0.001 (or 0.01)	#orig: 0.005
 	momentum = 0.9     #default: 0.9	#orig: 0.0
 	weightDecay  = 5e-4    #default: 5e-4	#orig: 0.0
 	batchSize = 128	 #default: 128	#orig: 64
@@ -372,7 +372,7 @@ elif(useImageDataset):
 	learningRateSchedulerStepsize = 10	#default: 30	#orig: 10	
 	learningRateSchedulerGamma = 0.5	#default: 0.1	#orig: 0.5
 	batchNormFC = False	#optional	#batch norm for fully connected layers
-	dropout = False
+	dropout = False	#default: False
 	dropoutProb = 0.5 	#default: 0.5	#orig: 0.3
 
 if(trainNumberOfEpochsHigh):

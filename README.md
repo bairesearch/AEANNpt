@@ -35,3 +35,8 @@ python ANNpt_main.py
 
 ![BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.png](https://github.com/bairesearch/AEANNpt/blob/main/dev/BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.png?raw=true)
 - [BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.pdf](https://github.com/bairesearch/AEANNpt/blob/main/dev/BAANNAEANN-BreakawayAutoencoderArchitectureDevelopment-06April2025a.pdf?raw=true)
+
+## Breakaway vs Backprop performance
+
+![breakawayBackpropTestAccuracy-SMALL.png](https://github.com/bairesearch/AEANNpt/blob/main/graph/breakawayBackpropTestAccuracy-SMALL.png?raw=true)
+

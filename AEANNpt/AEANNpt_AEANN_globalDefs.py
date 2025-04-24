@@ -20,11 +20,12 @@ AEANNpt AEANN globalDefs
 #autoencoder/breakaway architecture parameters:
 useAutoencoder = False	#optional	#condition training of hidden layers on directly connected input (stacked autoencoder algorithm)
 useBreakaway = True	#optional	#condition training of hidden layers on directly connected output (stacked breakaway algorithm)
-AEANNtrainGreedy = True	#train weights for hidden layers separately (greedy training algorithm) #required for custom bio plausible approximation of multilayer backprop
-if(useAutoencoder or useBreakaway or AEANNtrainGreedy):
-	trainLocal = True	#mandatory	#execute training at each layer (AEANNpt_AEANN training code), do not execute training at final layer only (ANNpt_main training code)
+if(useAutoencoder or useBreakaway):
+	AEANNtrainGreedy = True	#default: True #train weights for hidden layers separately (greedy training algorithm) - detaches weights to prevent full backprop below current layer being trained #required for custom bio plausible approximation of multilayer backprop
+	trainLocal = True	#mandatory: True	#execute training at each layer (AEANNpt_AEANN training code), do not execute training at final layer only (ANNpt_main training code)
 else:
-	trainLocal = False	#optional	#disable for debug/benchmark against standard full layer backprop
+	AEANNtrainGreedy = False #mandatory: False
+	trainLocal = False	#default: False #disable for debug/benchmark against standard full layer backprop
 supportSkipLayers = False #optional	#fully connected skip layer network
 supportSkipLayersResidual = False	#optional	#direct residual connections
 
