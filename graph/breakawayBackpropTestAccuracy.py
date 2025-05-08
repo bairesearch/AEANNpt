@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-y1_values = [95.82, 81.33, 57.00, 64.76, 86.33, 40.40, 27.30, 60.22, 74.00, 74.67, 91.00, 66.33]
-y2_values = [76.69, 76.78, 56.41, 64.86, 84.59, 37.85, 35.21, 59.34, 75.68, 75.12, 89.89, 65.75]
+y1_values = [95.82, 91.59, 62.86, 70.17, 90.15, 58.13, 91.41, 61.23, 85.54, 85.77, 92.12, 66.85, 95.45]
+y2_values = [76.69, 85.46, 62.26, 70.23, 89.23, 61.25, 93.16, 62.18, 88.33, 84.91, 89.64, 70.48, 95.45]
 
-group_labels = ["CIFAR-10 Resnet-18", "CIFAR-10 Conv-9", "tabular-benchmark", "blog-feedback", "titanic", "red-wine", "breast-cancer-wisconsin", "diabetes-readmission", "banking-marketing", "adult_income_dataset", "covertype", "higgs"]
+group_labels = ["CIFAR-10 Resnet-18", "CIFAR-10 Conv-9", "tabular-benchmark", "blog-feedback", "titanic", "red-wine", "breast-cancer-wisconsin", "diabetes-readmission", "banking-marketing", "adult_income_dataset", "covertype", "higgs", "new-thyroid"]
 
 group_descriptions = [
 	"CIFAR-10: Resnet-18; lay=16, units<=65536 (ch*pix)\n                lin lay=1, units=512",
@@ -19,6 +19,7 @@ group_descriptions = [
 	"adult_income_dataset: MLP-5; lay=3, units=256",
 	"covertype: MLP-7; lay=5, units=512",
 	"higgs: MLP-5; lay=3, units=256",
+	"new-thyroid: MLP-4; lay=2, units=16",
 ]
 
 # Convert to arrays
