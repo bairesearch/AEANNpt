@@ -27,7 +27,42 @@ def createModel(dataset):
 	numberOfFeatures = ANNpt_data.countNumberFeatures(dataset)
 	numberOfClasses, numberOfClassSamples = ANNpt_data.countNumberClasses(dataset)
 	
-	print("creating new model")
+	if(printAEANNmodelProperties):
+		print("Creating new model:")
+		print("\t ---")
+		print("\t datasetType = ", datasetType)
+		print("\t stateTrainDataset = ", stateTrainDataset)
+		print("\t stateTestDataset = ", stateTestDataset)
+		print("\t ---")
+		print("\t datasetName = ", datasetName)
+		print("\t datasetRepeatSize = ", datasetRepeatSize)
+		print("\t trainNumberOfEpochs = ", trainNumberOfEpochs)
+		print("\t ---")
+		print("\t batchSize = ", batchSize)
+		print("\t numberOfLayers = ", numberOfLayers)
+		print("\t hiddenLayerSize = ", hiddenLayerSize)
+		print("\t inputLayerSize (numberOfFeatures) = ", numberOfFeatures)
+		print("\t outputLayerSize (numberOfClasses) = ", numberOfClasses)
+		print("\t ---")
+		print("\t useAutoencoder = ", useAutoencoder)
+		print("\t useBreakaway = ", useBreakaway)
+		print("\t AEANNtrainGreedy = ", AEANNtrainGreedy)
+		print("\t trainLocal = ", trainLocal)	#False typically indicates standard full backprop ANN training
+		print("\t ---")
+		print("\t supportSkipLayers = ", supportSkipLayers)
+		print("\t supportSkipLayersResidual = ", supportSkipLayersResidual)
+		print("\t autoencoderPrediction = ", autoencoderPrediction)
+		print("\t supportSkipLayersF = ", supportSkipLayersF)
+		print("\t supportSkipLayersB = ", supportSkipLayersB)
+		print("\t ---")
+		print("\t trainingUpdateImplementation = ", trainingUpdateImplementation)
+		print("\t ---")
+		print("\t useImageDataset = ", useImageDataset)
+		if(useImageDataset):
+			print("\t useCNNlayers = ", useCNNlayers)
+			print("\t numberOfConvlayers = ", numberOfConvlayers)
+			print("\t numberOfFFLayers = ", numberOfFFLayers)
+		
 	config = AEANNpt_AEANNmodel.AEANNconfig(
 		batchSize = batchSize,
 		numberOfLayers = numberOfLayers,

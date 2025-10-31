@@ -17,6 +17,8 @@ AEANNpt AEANN globalDefs
 
 """
 
+printAEANNmodelProperties = True
+
 #autoencoder/breakaway architecture parameters:
 useAutoencoder = False	#optional	#condition training of hidden layers on directly connected input (stacked autoencoder algorithm)
 useBreakaway = True	#optional	#condition training of hidden layers on directly connected output (stacked breakaway algorithm)
@@ -123,6 +125,11 @@ useInbuiltCrossEntropyLossFunction = True	#required
 simulatedDendriticBranches = False	#optional	#performTopK selection of neurons based on local inhibition - equivalent to multiple independent fully connected weights per neuron (SDBANN)
 useLinearSublayers = False
 
+if(useTabularDataset):
+	datasetType = "useTabularDataset"
+elif(useImageDataset):
+	datasetType = "useImageDataset"
+	
 #training epoch parameters:
 trainNumberOfEpochsHigh = False	#use ~4x more epochs to train
 
