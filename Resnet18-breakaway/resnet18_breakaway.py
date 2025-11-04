@@ -35,6 +35,9 @@ b) greedy "breakway" learning where;
 
 """
 
+useResnet18 = True	#else resnet9
+BAANNtrainOutputConnections = True #default: True #orig: True
+
 # -------------------------------------------------------------
 #   ResNet-18 (CIFAR-friendly) + two training regimes:
 #   1) full back-prop		   (--mode full)
@@ -51,6 +54,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from datasets import load_dataset
+from torchsummary import summary
 
 # ------------------------------------------------------------------
 #  1.  CIFAR-friendly ResNet-18 (BasicBlock identical to He et al.)
@@ -87,10 +91,14 @@ class ResNet18Breakaway(nn.Module):
 		self.bn1   = nn.BatchNorm2d(64)
 		self.layer1 = self._make_layer(64,  2, 1)
 		self.layer2 = self._make_layer(128, 2, 2)
-		self.layer3 = self._make_layer(256, 2, 2)
-		self.layer4 = self._make_layer(512, 2, 2)
+		if(useResnet18):
+			self.layer3 = self._make_layer(256, 2, 2)
+			self.layer4 = self._make_layer(512, 2, 2)
 		self.gap	= nn.AdaptiveAvgPool2d(1)
-		self.fc	 = nn.Linear(512, num_classes)
+		if(useResnet18):
+			self.fc	 = nn.Linear(512, num_classes)
+		else:
+			self.fc	 = nn.Linear(128, num_classes)
 
 		# --------------------------------------------------------------
 		# collect (conv , bn) pairs in forward order
@@ -107,7 +115,11 @@ class ResNet18Breakaway(nn.Module):
 
 	# -- helper: iterate basic blocks in order --------------------
 	def _iter_blocks(self):
-		for layer in (self.layer1, self.layer2, self.layer3, self.layer4):
+		if(useResnet18):
+			layers = (self.layer1, self.layer2, self.layer3, self.layer4)
+		else:
+			layers = (self.layer1, self.layer2)
+		for layer in layers:
 			for blk in layer:
 				yield blk
 
@@ -134,8 +146,9 @@ class ResNet18Breakaway(nn.Module):
 		out = F.relu(self.bn1(self.conv1(x)))
 		out = self.layer1(out)
 		out = self.layer2(out)
-		out = self.layer3(out)
-		out = self.layer4(out)
+		if(useResnet18):
+			out = self.layer3(out)
+			out = self.layer4(out)
 		return out
 
 	def forward(self, x, return_feats=False):
@@ -214,6 +227,7 @@ def train_epoch(net, loader, opt, device, criterion):
 def train_full(args):
 	dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	net = ResNet18Breakaway(num_classes=args.num_classes).to(dev)
+	print(net)
 
 	train_ld, test_ld = build_dataloaders(args.dataset, args.batch)
 	opt = SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
@@ -234,6 +248,7 @@ def train_full(args):
 def train_breakaway(args):
 	dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	net = ResNet18Breakaway(num_classes=args.num_classes).to(dev)
+	print(net)
 	train_ld, test_ld = build_dataloaders(args.dataset, args.batch)
 	ce = nn.CrossEntropyLoss()
 
@@ -241,13 +256,31 @@ def train_breakaway(args):
 	for p in net.parameters():
 		p.requires_grad = False
 
+	if not BAANNtrainOutputConnections:
+		print("[breakaway] Using FIXED random breakaway heads (BAANNtrainOutputConnections=False)")
+	else:
+		print("[breakaway] Training breakaway heads (BAANNtrainOutputConnections=True)")
+
 	# iterate over each conv layer
 	for idx, ((conv, bn), head) in enumerate(zip(net.conv_bn_pairs, net.bk_heads)):
-		# un-freeze
-		for p in (*conv.parameters(), *bn.parameters(), *head.parameters()):
-			p.requires_grad = True
 
-		params = list(conv.parameters()) + list(bn.parameters()) + list(head.parameters())
+		# decide which params to train this stage
+		conv_params = list(conv.parameters())
+		bn_params = list(bn.parameters())
+		head_params = list(head.parameters())
+
+		# un-freeze conv/bn always; head only if training heads is enabled
+		for p in (conv_params + bn_params):
+			p.requires_grad = True
+		if BAANNtrainOutputConnections:
+			for p in head_params:
+				p.requires_grad = True		# train head
+		else:
+			for p in head_params:
+				p.requires_grad = False		# keep head fixed & random
+
+		params = conv_params + bn_params + (head_params if BAANNtrainOutputConnections else [])
+
 		opt = SGD(params, lr=0.02, momentum=0.9, weight_decay=5e-4)  # smaller LR
 		sch = CosineAnnealingLR(opt, T_max=args.sub_epochs)
 
@@ -272,7 +305,7 @@ def train_breakaway(args):
 					  f"loss {loss_sum/n:.4f}  head-acc {acc:.2f}%")
 
 		# re-freeze before moving on
-		for p in params:
+		for p in (conv_params + bn_params + head_params):
 			p.requires_grad = False
 
 	# optional: copy last head -> main fc

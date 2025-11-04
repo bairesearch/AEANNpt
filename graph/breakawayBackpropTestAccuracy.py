@@ -5,6 +5,7 @@ y1_values = [95.82, 91.59, 62.86, 70.17, 90.15, 58.13, 91.41, 61.23, 85.54, 85.7
 y2_values = [76.69, 85.46, 62.26, 70.23, 89.23, 61.25, 93.16, 62.18, 88.33, 84.91, 89.64, 70.48, 95.45]
 #y1_values = [95.82, 91.67, 64.95, 70.11, 89.39, 58.40, 93.36, 62.56, 83.97, 85.63, 92.47, 65.91, 71.73, 100.0, 95.45]	#update ANNpt codebase, numberOfEpochs=10, batchSize=128
 #y2_values = [76.69, 85.82, 64.08, 70.21, 88.53, 53.45, 92.58, 62.34, 89.02, 85.32, 90.95, 64.42, 71.70, 94.21, 95.45]	#update ANNpt codebase, numberOfEpochs=10, batchSize=128
+#y2_values = [63.79, 70.21, 64.01, 69.94, 85.16, 60.16, 82.23, 62.51, 87.54, 83.96, 76.62, 63.11, 71.51, 84.66, 90.62]	#update ANNpt codebase, numberOfEpochs=10, batchSize=128 BAANNtrainOutputConnections=False
 
 group_labels = ["CIFAR-10 Resnet-18", "CIFAR-10 Conv-9", "tabular-benchmark", "blog-feedback", "titanic", "red-wine", "breast-cancer-wisconsin", "diabetes-readmission", "banking-marketing", "adult_income_dataset", "covertype", "higgs", "new-thyroid"]
 #group_labels = ["CIFAR-10 Resnet-18", "CIFAR-10 Conv-9", "tabular-benchmark", "blog-feedback", "titanic", "red-wine", "breast-cancer-wisconsin", "diabetes-readmission", "banking-marketing", "adult_income_dataset", "covertype", "higgs", "topquark", "iris", "new-thyroid"]

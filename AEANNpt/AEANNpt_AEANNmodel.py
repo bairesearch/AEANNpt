@@ -157,6 +157,11 @@ class AEANNmodel(nn.Module):
 			self.layersLinearB = nn.ModuleList(layersLinearListB)
 		if(useBreakaway):
 			self.layersLinearO = nn.ModuleList(layersLinearListO)
+			if(not BAANNtrainOutputConnections):
+				for layer in self.layersLinearO:
+					if layer is not None:
+						for param in layer.parameters():
+							param.requires_grad_(False)
 			if(trainingUpdateImplementation == "hebbian"):
 				self.layersLinearOB = nn.ModuleList(layersLinearListOB)
 		self.activationF = ANNpt_linearSublayers.generateActivationFunction(activationFunctionTypeForward)
@@ -333,6 +338,7 @@ class AEANNmodel(nn.Module):
 
 		#hi[+ho] activation deltas:
 		hZderivative = self.calculateActivationDerivative(hA)	#or hZ
+		hError = None
 		if(useAutoencoder):
 			iError2 = self.calcMSEDerivative(Ipred, Itarget)	#shape: batSize*iSize
 			hiWeight = self.layersLinearB[l2].weight	#shape: iSize*hSize
@@ -347,6 +353,8 @@ class AEANNmodel(nn.Module):
 				hError = (hErrorI+hErrorO)	#OLD: /2
 			else:
 				hError = hErrorO
+		if(hError is None):
+			hError = pt.zeros_like(hA)
 
 		#ih activation deltas:
 		iZderivative = self.calculateActivationDerivative(iA)	#or iZ
@@ -354,10 +362,12 @@ class AEANNmodel(nn.Module):
 		iError1 = pt.matmul(hError, ihWeight)*iZderivative	#backprop algorithm: error_l = (W_l+1 * error_l+1) . activationFunctionPrime(z_l)	#hidden neuron error must be passed back from axons to dendrites	#shape: batSize*iSize
 
 		#hi[+ho] parameter deltas:
+		hodCdW = None
+		hodCdB = None
 		if(useAutoencoder):
 			hidCdW = pt.matmul(iError2.transpose(0, 1), hA) / batchSize	#backprop algorithm: dC/dW = A_l-1 * error_l
 			hidCdB = pt.mean(iError2, dim=0)	#error_l
-		if(useBreakaway):
+		if(useBreakaway and BAANNtrainOutputConnections):
 			hodCdW = pt.matmul(oError2.transpose(0, 1), hA) / batchSize	#backprop algorithm: dC/dW = A_l-1 * error_l	
 			hodCdB = pt.mean(oError2, dim=0)	#error_l
 
@@ -370,7 +380,7 @@ class AEANNmodel(nn.Module):
 		if(useAutoencoder):
 			hidCdW = hidCdW*learningRate
 			hidCdB = hidCdB*learningRate
-		if(useBreakaway):
+		if(useBreakaway and BAANNtrainOutputConnections):
 			hodCdW = hodCdW*learningRate
 			hodCdB = hodCdB*learningRate
 
@@ -380,7 +390,7 @@ class AEANNmodel(nn.Module):
 			if(useAutoencoder):
 				self.layersLinearB[l2].weight -= hidCdW
 				self.layersLinearB[l2].bias -= hidCdB
-			if(useBreakaway):
+			if(useBreakaway and BAANNtrainOutputConnections):
 				self.layersLinearO[l2].weight -= hodCdW
 				self.layersLinearO[l2].bias   -= hodCdB
 
@@ -507,5 +517,4 @@ class AEANNmodel(nn.Module):
 		return outputPred
 	
 		
-
 

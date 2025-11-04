@@ -31,6 +31,9 @@ else:
 supportSkipLayers = False #optional	#fully connected skip layer network
 supportSkipLayersResidual = False	#optional	#direct residual connections
 
+if(useBreakaway):
+	BAANNtrainOutputConnections = True	#default: True	#orig: True
+
 #dataset parameters:
 useImageDataset = True	#use CIFAR-10 dataset with CNN 
 if(useImageDataset):
